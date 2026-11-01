@@ -1,0 +1,22 @@
+# Build and toolchain caches
+.tools/
+.venv/
+.venv*/
+**/build/
+**/dist/
+**/node_modules/
+__pycache__/
+*.pyc
+
+# Private game inputs (never commit copyrighted retail binaries or assets)
+**/original/
+**/analysis/
+*.iso
+*.cue
+*.bin
+*.img
+downloads/
+
+# Operating system
+.DS_Store
+Thumbs.db

@@ -1,0 +1,4 @@
+[submodule "mw-recomp"]
+	path = mw-recomp
+	url = https://github.com/austynoconnor/most-wanted-web.git
+	branch = claude-browser-port

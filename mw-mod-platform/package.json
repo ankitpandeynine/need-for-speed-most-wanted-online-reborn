@@ -1,0 +1,31 @@
+{
+  "name": "@nfsmw/mod-platform",
+  "version": "1.0.0",
+  "description": "Universal Mod SDK and Runtime Compatibility Layer for Need for Speed: Most Wanted (2005) Browser Edition",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mwmod": "./bin/mwmod.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/tests/*.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "nfsmw",
+    "recomp",
+    "webassembly",
+    "webgpu",
+    "mod-loader",
+    "texture-replacement"
+  ],
+  "author": "Ankit Pandey",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}

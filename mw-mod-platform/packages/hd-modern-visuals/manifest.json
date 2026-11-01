@@ -1,0 +1,52 @@
+{
+  "id": "hd-modern-visuals",
+  "name": "NFSMW HD Modern Visuals & Textures",
+  "version": "1.0.0",
+  "game": "nfsmw-2005",
+  "type": "texture",
+  "author": "NFSMW Browser Team",
+  "description": "High-definition UI, tachometer dials, asphalt surface details and enhanced environment reflections for the WebGPU browser runtime.",
+  "priority": 100,
+  "assets": [
+    {
+      "source": "assets/textures/globalb_hd.bin",
+      "target": "GLOBAL/GLOBALB.BIN",
+      "type": "file_override"
+    },
+    {
+      "source": "assets/textures/speedo_hd.png",
+      "target": "TEXTURES/HD/SPEEDO_NEEDLE",
+      "type": "texture_injection",
+      "textureHash": "0x3e17ab89"
+    },
+    {
+      "source": "assets/textures/tacho_hd.png",
+      "target": "TEXTURES/HD/TACHOMETER_DIAL",
+      "type": "texture_injection",
+      "textureHash": "0x4f8812c4"
+    }
+  ],
+  "settings": {
+    "anisotropic_filtering": {
+      "type": "select",
+      "label": "Anisotropic Texture Filtering",
+      "default": 8,
+      "options": [
+        { "label": "2x", "value": 2 },
+        { "label": "4x", "value": 4 },
+        { "label": "8x (Recommended)", "value": 8 },
+        { "label": "16x Ultra", "value": 16 }
+      ]
+    },
+    "enhanced_reflections": {
+      "type": "boolean",
+      "label": "Enhanced Car & Road Reflections",
+      "default": true
+    },
+    "hd_hud": {
+      "type": "boolean",
+      "label": "High-DPI HUD Scaling",
+      "default": true
+    }
+  }
+}
