@@ -1,0 +1,25 @@
+{
+  "name": "need-for-speed-most-wanted-online-reborn",
+  "version": "1.0.0",
+  "description": "Need for Speed: Most Wanted (2005) — Online Reborn. Ahead-of-time WebAssembly, WebGPU rendering, universal mod engine, and real-time multiplayer.",
+  "scripts": {
+    "dev": "npm run dev --prefix mw-browser",
+    "build": "npm run build --prefix mw-browser",
+    "preview": "npm run preview --prefix mw-browser",
+    "build:mods": "npm run build --prefix mw-mod-platform",
+    "test:mods": "npm test --prefix mw-mod-platform",
+    "test": "npm run test:mods"
+  },
+  "keywords": [
+    "nfsmw",
+    "need-for-speed",
+    "webassembly",
+    "webgpu",
+    "multiplayer",
+    "webrtc",
+    "recompilation",
+    "mods"
+  ],
+  "author": "ankitpandeynine",
+  "license": "MIT"
+}

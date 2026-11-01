@@ -1,124 +1,306 @@
-# Need for Speed: Most Wanted (2005) — Browser Edition
+# Need for Speed: Most Wanted (2005) — Online Reborn
 
-A high-performance, browser-native platform engineering project bringing the classic 2005 PC Black Edition of **Need for Speed: Most Wanted** to modern web browsers through **Ahead-of-Time WebAssembly translation**, **WebGPU rendering**, and an **open modern modding ecosystem**.
+[![Platform: WebAssembly + WebGPU](https://img.shields.io/badge/Platform-WebAssembly%20%2B%20WebGPU-orange.svg)](https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn)
+[![Simulation: 120 Hz Fixed](https://img.shields.io/badge/Simulation-120%20Hz%20Fixed-emerald.svg)](https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn)
+[![Multiplayer: Real--Time WebRTC](https://img.shields.io/badge/Multiplayer-Real--Time%20WebRTC-cyan.svg)](https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn)
+[![Modding: Layered VFS](https://img.shields.io/badge/Modding-Universal%20VFS%20%26%20HD%20Injection-purple.svg)](https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+An open-source, web-first platform port and modern recreation of **Need for Speed: Most Wanted (2005 Black Edition)**. By uniting ahead-of-time (AOT) static x86 binary recompilation, native WebGPU Direct3D 9 translation, an extensible layered virtual file system (VFS), and a real-time peer-to-peer multiplayer mesh, **Online Reborn** brings the legendary 2005 racing classic into modern web browsers at fixed 120 Hz simulation with zero plugins or emulators required.
 
 ---
 
-## Architecture Overview
+## 🏎️ Key Features
 
-Rather than a simple one-off game port, this project is architected as an extensible **browser game platform** split into three decoupled subsystems:
+- **Ahead-of-Time (AOT) Recompilation**: Recompiled directly from the original retail Black Edition executable (`speed.exe`) into C and WebAssembly using Clang/LLVM. Preserves 100% of the authentic EAGL engine vehicle dynamics, AI police pursuit mechanics, sound triggers, and career logic.
+- **Native WebGPU Graphics Accelerator**: Complete Direct3D 9 fixed-function and shader pipeline translated directly into modern WebGPU / WGSL compute shaders. Runs natively on Apple Metal, Direct3D 12, and Vulkan backends.
+- **120 Hz Fixed Simulation**: Decouples presentation rendering from the underlying physics tick, providing butter-smooth 120 FPS high-refresh rate gameplay without altering vehicle handling or AI timing.
+- **Real-Time Online Multiplayer**:
+  - Peer-to-peer WebRTC mesh & zero-latency local BroadcastChannel synchronization.
+  - 60 Hz vehicle telemetry packets (`position`, `velocity`, `heading`, `gear`, `rpm`, `nitroActive`, `speedMph`).
+  - Dead reckoning and latency compensation algorithms for ultra-smooth rival car positioning.
+  - Dedicated race modes: Sprint, Circuit, Drag, Speedtrap, and High-Heat Pursuit Tag.
+  - Interactive lobby room manager with 6-character room codes, driver callsigns, and radio taunt macros.
+  - Anti-Cheat Mod Verification: Handshakes cryptographic hashes of handling/tuning files between host and clients.
+- **Universal Modding Runtime (`.mwmod`)**:
+  - Layered Virtual File System (VFS) intercepting and overriding assets dynamically at runtime.
+  - Real-time EA chunk reader & TPK texture injector supporting up to 4K HD textures.
+  - In-browser Mod Manager with instant drag-and-drop `.mwmod` zip installer, priority reordering, and conflict resolution.
+- **Client-Side Virtual Storage (OPFS)**:
+  - Uses the browser's private Origin Private File System (OPFS) and Cache API to store game assets locally.
+  - **100% Legal & Free to Host**: Web deployment contains zero copyrighted game assets. Players import their own retail Black Edition files once, which are stored locally in the browser.
+
+---
+
+## 🏛️ Target Architecture
+
+The project is structured into three independent, decoupled systems:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        MW Browser Edition                              │
-├────────────────────────────────────────────────────────────────────────┤
-│ 1. User-Facing Platform (mw-browser)                                   │
-│    • React 19 + TypeScript + Vite launcher & dashboard                 │
-│    • Origin Private File System (OPFS) & IndexedDB asset manager       │
-│    • Interactive mod manager (toggle, reorder, drag & drop)            │
-│    • WebGPU settings (720p/1080p, 60/120 Hz, FOV, 1-16x AF)            │
-│    • Gamepad API (Xbox 360 / PS2 layout) & keyboard mapping            │
-├────────────────────────────────────────────────────────────────────────┤
-│ 2. Universal Mod Runtime (mw-mod-platform)                             │
-│    • Layered Virtual File System (VFS) with case-insensitive matching  │
-│    • WebGPU HD Texture Replacer & injection pipeline                   │
-│    • .mwmod packaging format with SHA-256 integrity checks             │
-│    • EA Chunk (0x00030201/2) & TPK parser with bStringHash             │
-├────────────────────────────────────────────────────────────────────────┤
-│ 3. Core Recompilation Engine (mw-recomp)                               │
-│    • Ahead-of-time x86 translation to C compiled to WebAssembly        │
-│    • Direct3D 9 translated directly to WebGPU WGSL shaders             │
-│    • Fixed 120 Hz vehicle physics & simulation rate                    │
-│    • Widescreen view, aspect correction, and HUD repositioning         │
-│    • Web Audio API sound playback via DirectSound shims                │
+│               NEED FOR SPEED: MOST WANTED (ONLINE REBORN)              │
+└────────────────────────────────────────────────────────────────────────┘
+                                   │
+      ┌────────────────────────────┼────────────────────────────┐
+      ▼                            ▼                            ▼
+┌──────────────────────┐ ┌──────────────────────┐ ┌──────────────────────┐
+│     GAME RUNTIME     │ │     MOD RUNTIME      │ │   ONLINE SERVICES    │
+├──────────────────────┤ ├──────────────────────┤ ├──────────────────────┤
+│ • SpeedRecomp.wasm   │ │ • Layered VFS        │ │ • WebRTC Mesh / STUN │
+│ • WebGPU / WGSL D3D9 │ │ • EA Chunk Parser    │ │ • 60 Hz Telemetry    │
+│ • 120 Hz Simulation  │ │ • Texture Injector   │ │ • Dead Reckoning     │
+│ • Web Audio Engine   │ │ • .mwmod Packager    │ │ • Anti-Cheat Hasher  │
+│ • OPFS Storage Cache │ │ • Mod Prioritizer    │ │ • Lobby & Leaderboard│
+└──────────────────────┘ └──────────────────────┘ └──────────────────────┘
+      │                            │                            │
+      └────────────────────────────┼────────────────────────────┘
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                       USER-FACING BROWSER PLATFORM                     │
+│  React 19 + TypeScript + Vite 6 + Glassmorphism UI + Gamepad Engine    │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Repository Structure
+
+```
+needforspeedmw/
+├── mw-browser/               # React 19 + TypeScript web launcher & UI
+│   ├── src/
+│   │   ├── components/       # Dashboard, MultiplayerView, ModManager, Storage
+│   │   ├── services/         # GameRuntime, MultiplayerService, ModManagerService
+│   │   └── types/            # VehicleTelemetry, LobbyRoom, ModItem
+│   ├── public/               # Static assets, worker.js, games.json, _headers
+│   └── vercel.json           # Vercel configuration with COOP/COEP isolation
+│
+├── mw-mod-platform/          # Universal Mod Engine & SDK
+│   ├── src/
+│   │   ├── core/             # ModManifest schema, hashing, bStringHash
+│   │   ├── formats/          # EA Chunk, TPK Texture, VLT parser
+│   │   ├── vfs/              # Layered Virtual File System
+│   │   └── injector/         # WebGPU HD Texture Replacement
+│   └── bin/                  # CLI tool: `mwmod pack`, `mwmod inspect`
+│
+├── mw-recomp/                # Ahead-of-time recompilation toolchain
+│   ├── src/                  # Recompiled C engine stubs & Direct3D 9 hooks
+│   ├── patches/              # 120 Hz streaming, widescreen FOV, controller fixes
+│   └── tests/                # Automated pytest validation suite
+│
+├── vercel.json               # Root monorepo deployment descriptor
+└── package.json              # Monorepo unified build scripts
+```
+
 ---
 
-## Directory Structure
-
-| Subsystem | Directory | Purpose |
-| :--- | :--- | :--- |
-| **Engine Recompilation** | `mw-recomp/` | Game recompilation, Direct3D 9 to WebGPU translation, and Emscripten runtime |
-| **Universal Mod Platform** | `mw-mod-platform/` | Mod SDK, `.mwmod` packager CLI (`mwmod`), VFS overlay, and HD texture injector |
-| **Browser Application** | `mw-browser/` | React launcher UI, OPFS storage manager, settings, and telemetry HUD |
-
----
-
-## Current Status & Milestones
-
-- [x] **Toolchain & Native Baseline:** AppleClang, CMake, Ninja, and Python 3.12 verified; native stub and macOS app build passed.
-- [x] **WebAssembly & WebGPU Build Pipeline:** Emscripten 6.0.13 integrated with WebGPU WGSL shader generation and WasmFS LRU caching; `SpeedRecomp.wasm` builds cleanly.
-- [x] **Streamed File & Scheduler Stalls Solved:** Kit updated to `8614a82` to release scheduler during chunked asset reads and skip 0x0 canvas presents.
-- [x] **Universal Mod SDK (`mw-mod-platform`):**
-  - Fully tested VFS overlay with priority layers and path normalization.
-  - Native EA `bStringHash` implementation matching retail executable.
-  - WebGPU HD Texture Replacer with runtime injection telemetry.
-  - Starter HD visuals package (`hd-modern-visuals-1.0.0.mwmod`) packaged and tested.
-- [x] **Modern Browser Platform (`mw-browser`):**
-  - Cross-Origin Isolation headers (`COOP: same-origin`, `COEP: require-corp`) for multithreaded WASM.
-  - Interactive launcher with WebGPU capability probing, OPFS file management, and real-time telemetry HUD.
-
----
-
-## Getting Started
+## ⚡ Quick Start (Local Development)
 
 ### Prerequisites
-- macOS 14+ (tested on Apple Silicon M-series) or Linux / Windows
-- Python 3.12+ with `uv`
-- Homebrew with `emscripten` (or Emscripten SDK 6.0+)
-- Node.js 20+ and npm
 
-### 1. Build the Mod Platform
-```bash
-cd mw-mod-platform
-npm install
-npm run build
-npm test
+- **Node.js**: v18.0.0 or higher
+- **npm** or **pnpm**
+- Modern Chromium-based browser (Google Chrome, Microsoft Edge, Brave) with WebGPU enabled (`chrome://flags/#enable-unsafe-webgpu` if needed)
+
+### Installation & Launch
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn.git
+   cd need-for-speed-most-wanted-online-reborn
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install --prefix mw-browser
+   npm install --prefix mw-mod-platform
+   ```
+
+3. **Start the local development server**:
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**:
+   Navigate to `http://localhost:3000`. You will see the **Online Reborn** Dashboard with full Gamepad and WebGPU detection active.
+
+---
+
+## 🌐 Deploying to Vercel for Free
+
+This repository is optimized to deploy directly to **Vercel's Free Hobby Tier** with zero server costs, zero egress billing, and complete COOP/COEP isolation support.
+
+### Step-by-Step Vercel Deployment
+
+1. **Fork or Push to GitHub**:
+   Ensure your repository is pushed to your GitHub account (`ankitpandeynine/need-for-speed-most-wanted-online-reborn`).
+
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com) and log in.
+   - Click **Add New Project** and select your GitHub repository.
+
+3. **Configure Project Settings**:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Leave as `./` (or select `mw-browser`)
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `mw-browser/dist` (or `dist` if root directory is set to `mw-browser`)
+
+4. **Deploy**:
+   - Click **Deploy**. Vercel will build and distribute your application globally across its Edge Network in ~30 seconds.
+
+### Why It Fits Vercel's Free Tier
+
+- **Vercel Limits**: Vercel enforces a 100 MB per-file upload limit and 300 MB maximum deployment bundle.
+- **Client-Side OPFS Architecture**: The 2.9 GB retail game data files (textures, car models, music) are **never hosted on Vercel**. Instead, the web build contains only the compiled WebAssembly engine and web UI (`<15 MB`). When a user visits the site, their local retail files are imported directly into the browser's persistent private OPFS storage via the HTML5 File System Access API.
+
+### Required Cross-Origin Headers (COOP / COEP)
+
+WebAssembly multithreading and `SharedArrayBuffer` require strict cross-origin isolation. The included `vercel.json` and `_headers` configure these automatically:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" },
+        { "key": "Cross-Origin-Resource-Policy", "value": "cross-origin" }
+      ]
+    }
+  ]
+}
 ```
 
-### 2. Run the Browser Platform
+---
+
+## 🎮 Multiplayer Synchronization & Protocol
+
+The multiplayer system operates alongside the game runtime, communicating via low-latency WebRTC DataChannels and local `BroadcastChannel` meshes.
+
+### Vehicle Telemetry Packet (60 Hz)
+
+```typescript
+interface VehicleTelemetry {
+  playerId: string;
+  callsign: string;
+  carModel: string;
+  paintColor: string;
+  position: { x: number; y: number; z: number };
+  velocity: { x: number; y: number; z: number };
+  heading: number;
+  speedMph: number;
+  rpm: number;
+  gear: number;
+  nitroActive: boolean;
+  bounty: number;
+  lap: number;
+  checkpoint: number;
+  pingMs: number;
+  timestamp: number;
+}
+```
+
+### Dead Reckoning & Interpolation
+
+To eliminate stutter and rubber-banding over internet connections:
+$$\vec{P}(t) = \vec{P}_0 + \vec{V}_0 \cdot \Delta t + \frac{1}{2} \vec{A}_0 \cdot (\Delta t)^2$$
+Remote rival vehicles are smoothly rendered in 3D perspective ahead on the track and displayed as dynamic blips on the HUD radar minimap.
+
+---
+
+## 🛠️ Universal Modding Engine (`.mwmod`)
+
+The platform includes a built-in mod engine capable of loading existing NFSMW community modifications without modifying the original game executable.
+
+### Included & Supported Mods
+
+| Mod Name | Category | Features |
+|:---|:---|:---|
+| **HD Modern Visuals Pack** | Texture | 4K AI-upscaled road asphalt, foliage, and vehicle livery |
+| **X360 Visuals & Lighting FX** | Lighting | Authentic Xbox 360 visual filter, sun bloom, and asphalt reflections |
+| **BMW M3 GTR Restored Vinyl** | Vehicle | Original high-resolution blue/silver livery from game prologue |
+| **Widescreen HUD & UI Fix** | UI/HUD | Native 16:9 and 21:9 ultrawide scaling without gauge stretching |
+| **Police Heat 6 Extreme AI** | Script/AI | State patrol roadblock frequency and aggressive pursuit tactics |
+| **Custom Exhaust & Turbo Audio** | Audio | Lossless 48 kHz straight-cut gear whine and blow-off valve sounds |
+
+### Creating a Mod with the Mod SDK
+
+1. Create a `manifest.json`:
+   ```json
+   {
+     "id": "my-carbon-hud",
+     "name": "Carbon Style Tachometer",
+     "version": "1.0.0",
+     "author": "Racer",
+     "type": "texture",
+     "targets": ["FRONTEND/HUD.BIN"]
+   }
+   ```
+2. Package using the CLI:
+   ```bash
+   node mw-mod-platform/bin/mwmod.js pack ./my-mod-folder --output ./my-carbon-hud.mwmod
+   ```
+3. Drag and drop `my-carbon-hud.mwmod` directly into the in-browser Mod Manager.
+
+---
+
+## 🕹️ Controls & Input Mapping
+
+Full out-of-the-box support for the standard Web Gamepad API (Xbox 360, Xbox One/Series, DualShock 4, DualSense, 8BitDo) as well as Keyboard:
+
+| Action | Xbox Gamepad | PlayStation Controller | Keyboard (WASD) | Keyboard (Arrows) |
+|:---|:---|:---|:---|:---|
+| **Accelerate / Throttle** | Right Trigger (`RT`) | `R2` | `W` | `Up Arrow` |
+| **Brake / Reverse** | Left Trigger (`LT`) | `L2` | `S` | `Down Arrow` |
+| **Steering** | Left Thumbstick | Left Thumbstick | `A` / `D` | `Left` / `Right` |
+| **Handbrake (E-Brake)** | `A` Button | `Cross` | `Space` | `Space` |
+| **Nitrous Boost (N2O)** | `B` Button | `Circle` | `X` or `Shift` | `X` or `Shift` |
+| **Speedbreaker** | `X` Button | `Square` | `G` | `G` |
+| **Rear View Mirror** | Right Thumbstick Down | Right Thumbstick Down | `C` | `C` |
+| **Change Camera** | `Y` Button | `Triangle` | `V` | `V` |
+| **Pause Game** | `Start` Button | `Options` | `Escape` | `Escape` |
+
+---
+
+## 💻 Native App Support (Desktop Packaging)
+
+Want to run **Online Reborn** as a standalone native desktop app on macOS, Windows, or Linux?
+
+### Option 1: Tauri (Recommended for Ultra-Lightweight Native App)
+
+Tauri creates a ~15 MB native application using the operating system's native WebGPU webview:
+
+```bash
+npm install -g @tauri-apps/cli
+cd mw-browser
+tauri init
+tauri build
+```
+
+### Option 2: Electron
+
 ```bash
 cd mw-browser
-npm install
-npm run dev
-```
-Open `http://localhost:3000` in Google Chrome or any WebGPU-capable browser.
-
-### 3. Build the WebAssembly Game Engine (Stub / Game)
-```bash
-cd mw-recomp
-PATH="$PWD/.venv/bin:/opt/homebrew/bin:$PATH" \
-EMSDK="../.tools/emsdk" \
-.venv/bin/python tools/build.py --target web --stub
+npm install --save-dev electron
+# Run with WebGPU enabled:
+npx electron . --enable-features=Vulkan,DefaultANGLEVulkan,WebGPU
 ```
 
 ---
 
-## Mod Packaging with `mwmod` CLI
+## ⚖️ Legal & Fair Use Disclaimer
 
-To package a custom mod into a `.mwmod` bundle:
-```bash
-node mw-mod-platform/bin/mwmod.js pack path/to/mod-folder output-mod.mwmod
-node mw-mod-platform/bin/mwmod.js validate output-mod.mwmod
-node mw-mod-platform/bin/mwmod.js hash "BMWM3_TEXTURES"
-```
+**Need for Speed: Most Wanted (2005)** is a registered trademark of **Electronic Arts Inc. (EA)**. 
+
+This project is an independent educational and preservation engineering research effort. It does **not** contain, distribute, or host any copyrighted game binaries, media assets, music, car models, or textures. Users must supply their own legally purchased copy of the original PC Black Edition retail release.
 
 ---
 
-## Next Steps on the Technical Roadmap
+## 🌟 Acknowledgements & Community
 
-1. **Race Loading Reliability:** Profile and benchmark 20 consecutive career and quick-race launches under WebAssembly worker threads.
-2. **HD Texture Asset Integration:** Ingest and verify community 4K/2K texture packs for Black Edition tracks and cars.
-3. **Vehicle Replacement Pipeline:** Geometry parser and material binding for replacing base vehicle slots with custom car models.
-4. **Multiplayer Staged Rollout:** Phase 4 WebSocket lobby signaling, WebRTC DataChannels, and ghost-car time trial racing.
+- **Recompilation Community**: Ahead-of-time binary translation and Ghidra decompilation methodologies.
+- **MWEncyclopedia**: Exhaustive documentation of EAGL engine structures, chunk IDs, and physics tables.
+- **NFSMods Community**: Community modders who preserved and enhanced NFS Most Wanted for two decades.
 
 ---
 
-## License & Ownership
-
-- Original Need for Speed: Most Wanted (2005) code and assets are the property of Electronic Arts Inc.
-- No copyrighted game files or binaries are distributed with this repository.
-- Recompilation engine and tooling are powered by [recomp-kit](https://github.com/veritr1x/recomp-kit).
-- Browser platform and mod SDK are licensed under MIT.
+*Crafted with passion for high-speed street racing preservation.* 🏁

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Sparkles, HardDrive, Zap, Gamepad2, Info, Trophy, Gauge, Shield } from 'lucide-react';
+import { Play, Sparkles, HardDrive, Zap, Gamepad2, Info, Trophy, Gauge, Shield, Users } from 'lucide-react';
 import { GameSettings, ModItem, StorageStatus } from '../types';
 
 interface DashboardProps {
@@ -9,6 +9,7 @@ interface DashboardProps {
   mods: ModItem[];
   onOpenMods: () => void;
   onOpenStorage: () => void;
+  onOpenMultiplayer?: () => void;
   webGpuName?: string;
 }
 
@@ -62,6 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   mods,
   onOpenMods,
   onOpenStorage,
+  onOpenMultiplayer,
   webGpuName,
 }) => {
   const activeModsCount = mods.filter((m) => m.enabled).length;
@@ -112,8 +114,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Play size={20} fill="#000" />
               Launch Game Now
             </button>
+            {onOpenMultiplayer && (
+              <button
+                onClick={onOpenMultiplayer}
+                className="btn btn-secondary"
+                style={{
+                  padding: '14px 24px',
+                  border: '1px solid #f59e0b',
+                  color: '#fff',
+                }}
+              >
+                <Users size={18} color="#f59e0b" />
+                Multiplayer Grid <span className="live-pill" style={{ marginLeft: '4px' }}>LIVE</span>
+              </button>
+            )}
             <button onClick={onOpenMods} className="btn btn-secondary" style={{ padding: '14px 24px' }}>
-              <Sparkles size={18} color="#f59e0b" />
+              <Sparkles size={18} color="#06b6d4" />
               Manage Mods ({activeModsCount} Active)
             </button>
           </div>

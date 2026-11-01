@@ -41,4 +41,6 @@ export interface StorageStatus {
   isPersistent: boolean;
 }
 
-export type ViewTab = 'dashboard' | 'mods' | 'storage' | 'settings' | 'game';
+export type ViewTab = 'dashboard' | 'multiplayer' | 'mods' | 'storage' | 'settings' | 'game';
+
+export * from './multiplayer';

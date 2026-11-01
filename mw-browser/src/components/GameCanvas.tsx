@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GameSettings, ModItem } from '../types';
-import { Square, Pause, Play, Monitor, Zap, Eye, Terminal } from 'lucide-react';
+import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom } from '../types';
+import { Square, Pause, Play, Monitor, Zap, Eye } from 'lucide-react';
+import { MultiplayerService } from '../services/multiplayer';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -22,6 +23,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [showTelemetry, setShowTelemetry] = useState(true);
   const [nosLevel, setNosLevel] = useState(100);
+  const [currentRoom, setCurrentRoom] = useState<LobbyRoom | null>(MultiplayerService.getCurrentRoom());
+  const [remoteRivals, setRemoteRivals] = useState<VehicleTelemetry[]>([]);
 
   // Resolution dimensions
   const getDimensions = () => {
@@ -39,6 +42,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const { width, height } = getDimensions();
 
+  // Subscribe to multiplayer telemetry
+  useEffect(() => {
+    const unsubRoom = MultiplayerService.subscribeRoom(setCurrentRoom);
+    const unsubTelemetry = MultiplayerService.subscribeTelemetry(setRemoteRivals);
+    return () => {
+      unsubRoom();
+      unsubTelemetry();
+    };
+  }, []);
+
   // Cockpit simulator loop when in cockpit view
   useEffect(() => {
     if (activeView !== 'cockpit') return;
@@ -51,17 +64,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     let frameCount = 0;
     let lastTime = performance.now();
-    let speedMph = 0;
-    let rpm = 1000;
-    let gear = 1;
+    let speedMph = 85;
+    let rpm = 3200;
+    let gear = 4;
     let nitrousActive = false;
+    let roadCurve = 0;
+    let steerX = 0;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = true;
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') steerX = -1;
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') steerX = 1;
       if (e.code === 'Escape') setIsPaused((p) => !p);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = false;
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft' || e.code === 'KeyD' || e.code === 'ArrowRight') steerX = 0;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -76,13 +94,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       if (!isPaused) {
-        const accel = nitrousActive ? 0.9 : 0.35;
-        speedMph = (speedMph + accel) % 192;
-        rpm = 1100 + ((speedMph * 50) % 6800);
+        const accel = nitrousActive ? 0.95 : 0.35;
+        speedMph = Math.min(206, speedMph + accel * (speedMph < 190 ? 1 : 0.2));
+        rpm = 2500 + ((speedMph * 48) % 5500);
         gear = Math.min(6, Math.floor(speedMph / 32) + 1);
 
         if (nitrousActive) setNosLevel((p) => Math.max(0, p - 0.25));
-        else setNosLevel((p) => Math.min(100, p + 0.1));
+        else setNosLevel((p) => Math.min(100, p + 0.12));
+
+        roadCurve = Math.sin(time * 0.001) * 60;
+
+        // Broadcast local telemetry to multiplayer peers
+        MultiplayerService.sendTelemetry({
+          speedMph: Math.round(speedMph),
+          rpm: Math.round(rpm),
+          gear,
+          nitroActive: nitrousActive,
+          position: { x: steerX * 30, y: 0, z: time * 0.1 },
+        });
       }
 
       // Sky and ambient environment (Rockport dusk)
@@ -98,45 +127,127 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // City skyline silhouette
       ctx.fillStyle = '#0f141d';
-      const buildingWidth = 35;
-      for (let i = 0; i < width; i += buildingWidth) {
-        const bHeight = ((i * 13) % 70) + 20;
-        ctx.fillRect(i, horizon - bHeight, buildingWidth - 4, bHeight);
+      for (let i = 0; i < width; i += 60) {
+        const h = 40 + Math.sin(i * 0.05) * 35;
+        ctx.fillRect(i, horizon - h, 50, h);
       }
 
-      // Asphalt Road
-      ctx.fillStyle = '#121620';
+      // Ground (Rockport highway asphalt)
+      ctx.fillStyle = '#14171f';
+      ctx.fillRect(0, horizon, width, height - horizon);
+
+      // Road perspective trapezoid
+      const roadTopW = 120;
+      const roadBotW = width * 0.92;
+      const roadCenterX = width * 0.5 + roadCurve;
+
+      ctx.fillStyle = '#1e2430';
       ctx.beginPath();
-      ctx.moveTo(width * 0.46, horizon);
-      ctx.lineTo(width * 0.54, horizon);
-      ctx.lineTo(width * 0.88, height);
-      ctx.lineTo(width * 0.12, height);
+      ctx.moveTo(roadCenterX - roadTopW / 2, horizon);
+      ctx.lineTo(roadCenterX + roadTopW / 2, horizon);
+      ctx.lineTo(width * 0.5 + roadBotW / 2, height);
+      ctx.lineTo(width * 0.5 - roadBotW / 2, height);
       ctx.closePath();
       ctx.fill();
 
-      // Road side barriers
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 3;
+      // Road borders & curbs
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(width * 0.46, horizon);
-      ctx.lineTo(width * 0.12, height);
-      ctx.moveTo(width * 0.54, horizon);
-      ctx.lineTo(width * 0.88, height);
+      ctx.moveTo(roadCenterX - roadTopW / 2, horizon);
+      ctx.lineTo(width * 0.5 - roadBotW / 2, height);
       ctx.stroke();
 
-      // Road Lane Markers
-      const dashOffset = (time * 0.15) % 80;
+      ctx.beginPath();
+      ctx.moveTo(roadCenterX + roadTopW / 2, horizon);
+      ctx.lineTo(width * 0.5 + roadBotW / 2, height);
+      ctx.stroke();
+
+      // Moving road dashed center lines
+      const dashOffset = (time * (speedMph * 0.05)) % 60;
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
       ctx.setLineDash([30, 45]);
       ctx.lineDashOffset = -dashOffset;
       ctx.beginPath();
-      ctx.moveTo(width * 0.5, horizon);
+      ctx.moveTo(roadCenterX, horizon);
       ctx.lineTo(width * 0.5, height);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Speedometer & Tachometer HUD
+      // --- RENDER REMOTE MULTIPLAYER RIVALS ON ROAD ---
+      remoteRivals.forEach((rival, idx) => {
+        // Perspective distance calculation
+        const rivalDistance = 180 + idx * 120 - ((time * 0.02) % 100);
+        const scale = Math.max(0.15, Math.min(1.0, 300 / rivalDistance));
+        const rx = width * 0.5 + (rival.position.x || 0) * scale * 12 + (idx % 2 === 0 ? -120 : 110) * scale;
+        const ry = horizon + (height - horizon) * (1 - scale * 0.85);
+
+        if (ry > horizon && ry < height - 60) {
+          const carW = 140 * scale;
+          const carH = 50 * scale;
+
+          // Rival Car Body Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.beginPath();
+          ctx.ellipse(rx, ry + carH * 0.9, carW * 0.7, carH * 0.25, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Rival Car Body
+          ctx.fillStyle = rival.paintColor || '#38bdf8';
+          ctx.fillRect(rx - carW / 2, ry, carW, carH);
+
+          // Rear Window & Roof
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(rx - carW * 0.35, ry - carH * 0.45, carW * 0.7, carH * 0.45);
+
+          // Taillights
+          ctx.fillStyle = rival.nitroActive ? '#38bdf8' : '#ef4444';
+          ctx.shadowColor = rival.nitroActive ? '#06b6d4' : '#ef4444';
+          ctx.shadowBlur = rival.nitroActive ? 18 : 10;
+          ctx.fillRect(rx - carW * 0.45, ry + carH * 0.2, carW * 0.25, carH * 0.3);
+          ctx.fillRect(rx + carW * 0.2, ry + carH * 0.2, carW * 0.25, carH * 0.3);
+          ctx.shadowBlur = 0;
+
+          // Rival Callsign Tag Floating Above
+          ctx.font = `bold ${Math.max(10, Math.round(13 * scale))}px "Chakra Petch", sans-serif`;
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${rival.callsign} [${rival.speedMph} MPH]`, rx, ry - carH * 0.65);
+        }
+      });
+
+      // --- MULTIPLAYER RACE POSITION HUD (TOP CENTER) ---
+      if (currentRoom) {
+        ctx.fillStyle = 'rgba(10, 14, 23, 0.85)';
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        const hudW = 420;
+        const hudH = 48;
+        const hudX = width * 0.5 - hudW / 2;
+        const hudY = 20;
+
+        ctx.beginPath();
+        ctx.roundRect(hudX, hudY, hudW, hudH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = 'bold 16px "Chakra Petch", sans-serif';
+        ctx.fillStyle = '#f59e0b';
+        ctx.textAlign = 'left';
+        ctx.fillText(`POS 1 / ${currentRoom.players.length || 4}`, hudX + 18, hudY + 30);
+
+        ctx.font = '600 13px "Inter", sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`${currentRoom.trackName}`, hudX + 110, hudY + 30);
+
+        ctx.font = 'bold 13px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#10b981';
+        ctx.textAlign = 'right';
+        ctx.fillText('-0.42s GAP', hudX + hudW - 18, hudY + 30);
+      }
+
+      // --- SPEEDOMETER & TACHOMETER HUD ---
       const gaugeX = width - 180;
       const gaugeY = height - 160;
       const radius = 90;
@@ -156,7 +267,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // Digital speed
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 42px "Chakra Petch", sans-serif';
+      ctx.font = 'bold 44px "Chakra Petch", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`${Math.floor(speedMph)}`, gaugeX, gaugeY + 12);
       ctx.font = '600 13px "Inter", sans-serif';
@@ -184,7 +295,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = '#06b6d4';
       ctx.fillText('NOS', nosX + 7, nosY + nosH + 14);
 
-      // Mini-map circle
+      // Mini-map circle & Rivals
       const mapX = 140;
       const mapY = height - 140;
       const mapR = 85;
@@ -196,6 +307,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.lineWidth = 3;
       ctx.stroke();
 
+      // Player Blip (Amber arrow)
       ctx.fillStyle = '#f59e0b';
       ctx.beginPath();
       ctx.moveTo(mapX, mapY - 14);
@@ -204,6 +316,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.lineTo(mapX + 8, mapY + 10);
       ctx.closePath();
       ctx.fill();
+
+      // Rival Blips on minimap
+      remoteRivals.forEach((rival, idx) => {
+        const offsetAng = (idx + 1) * 0.9 + time * 0.001;
+        const bx = mapX + Math.sin(offsetAng) * 45;
+        const by = mapY + Math.cos(offsetAng) * 45;
+        ctx.fillStyle = rival.paintColor || '#06b6d4';
+        ctx.beginPath();
+        ctx.arc(bx, by, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
@@ -218,24 +341,31 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
 
     animId = requestAnimationFrame(render);
+
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [width, height, isPaused, nosLevel, activeView]);
+  }, [activeView, height, width, isPaused, nosLevel, remoteRivals, currentRoom]);
 
   return (
-    <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '24px 20px' }}>
-      {/* Top Session Control Bar */}
+    <div
+      style={{
+        padding: '16px 28px',
+        maxWidth: '1600px',
+        margin: '0 auto',
+      }}
+    >
+      {/* Session Toolbar */}
       <div
         className="glass-panel"
         style={{
+          padding: '12px 20px',
+          marginBottom: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 20px',
-          marginBottom: '16px',
           flexWrap: 'wrap',
           gap: '12px',
         }}
@@ -243,91 +373,71 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="status-dot"></span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              NFSMW Runtime Active
+            <span style={{ fontWeight: 700, fontSize: '14px', color: '#fff' }}>
+              NFSMW RUNTIME ACTIVE
             </span>
           </div>
 
-          <span style={{ color: '#334155' }}>|</span>
-          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-            Resolution: <strong style={{ color: '#f59e0b' }}>{width} × {height}</strong>
-          </span>
-          <span style={{ color: '#334155' }}>|</span>
-          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-            FPS: <strong style={{ color: '#10b981' }}>{fps}</strong> / {settings.frameRateLimit}
-          </span>
-          <span style={{ color: '#334155' }}>|</span>
-          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-            Simulation: <strong style={{ color: '#06b6d4' }}>120 Hz Locked</strong>
-          </span>
+          <div style={{ color: '#94a3b8', fontSize: '13px', display: 'flex', gap: '14px' }}>
+            <span>
+              Resolution: <strong style={{ color: '#fff' }}>{width}×{height}</strong>
+            </span>
+            <span>
+              FPS: <strong style={{ color: '#10b981' }}>{fps}</strong> / {settings.frameRateLimit}
+            </span>
+            <span>
+              Simulation: <strong style={{ color: '#06b6d4' }}>120 Hz Fixed</strong>
+            </span>
+            {currentRoom && (
+              <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                🏁 Online Grid: {currentRoom.players.length} Racers
+              </span>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Dual Mode View Switcher */}
-          <div style={{ display: 'flex', background: '#121620', padding: '3px', borderRadius: '8px', border: '1px solid #232b3c' }}>
+        {/* View Switcher & Session Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
               onClick={() => setActiveView('engine')}
-              style={{
-                background: activeView === 'engine' ? '#f59e0b' : 'transparent',
-                color: activeView === 'engine' ? '#000' : '#94a3b8',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
+              className={`btn ${activeView === 'engine' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '12px' }}
             >
-              <Terminal size={14} />
-              WebGPU Engine View
+              <Monitor size={14} /> WebGPU Engine
             </button>
             <button
               onClick={() => setActiveView('cockpit')}
-              style={{
-                background: activeView === 'cockpit' ? '#f59e0b' : 'transparent',
-                color: activeView === 'cockpit' ? '#000' : '#94a3b8',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
+              className={`btn ${activeView === 'cockpit' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '12px' }}
             >
-              <Eye size={14} />
-              Cockpit HUD Simulator
+              <Zap size={14} /> Cockpit Simulator
             </button>
           </div>
 
           <button
-            onClick={() => setShowTelemetry(!showTelemetry)}
+            onClick={() => setShowTelemetry((v) => !v)}
             className="btn btn-secondary"
-            style={{ fontSize: '12px', padding: '6px 12px' }}
+            style={{ padding: '6px 12px', fontSize: '12px' }}
           >
-            <Monitor size={14} />
-            {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
+            <Eye size={14} /> {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
           </button>
+
           <button
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={() => setIsPaused((p) => !p)}
             className="btn btn-secondary"
-            style={{ fontSize: '12px', padding: '6px 12px' }}
+            style={{ padding: '6px 12px', fontSize: '12px' }}
           >
-            {isPaused ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
+            {isPaused ? <Play size={14} /> : <Pause size={14} />}
             {isPaused ? 'Resume' : 'Pause'}
           </button>
+
           <button
             onClick={onStopGame}
             className="btn btn-danger"
-            style={{ fontSize: '12px', padding: '6px 14px' }}
+            style={{ padding: '6px 14px', fontSize: '12px' }}
           >
-            <Square size={14} fill="currentColor" />
-            Quit Game
+            <Square size={14} fill="currentColor" /> Quit Game
           </button>
         </div>
       </div>
@@ -399,7 +509,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             <div>Direct3D 9: <span style={{ color: '#06b6d4' }}>Active (WGSL Shaders)</span></div>
             <div>AF Filtering: <span style={{ color: '#10b981' }}>{settings.anisotropicFiltering}x</span></div>
             <div>Active Mods: <span style={{ color: '#f59e0b' }}>{mods.filter((m) => m.enabled).length} Overlays</span></div>
-            <div>VFS Memory: <span style={{ color: '#cbd5e1' }}>512 MiB Initial Heap</span></div>
+            <div>Multiplayer: <span style={{ color: currentRoom ? '#10b981' : '#94a3b8' }}>{currentRoom ? `Active (${currentRoom.players.length} Racers)` : 'Offline Solo'}</span></div>
             <div>Controls: <span style={{ color: '#fff' }}>Arrows / WASD • X / Shift for NOS</span></div>
           </div>
         )}

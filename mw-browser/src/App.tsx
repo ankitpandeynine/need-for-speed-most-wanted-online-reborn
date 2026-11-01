@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ViewTab, GameSettings, ModItem, StorageStatus } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { MultiplayerView } from './components/MultiplayerView';
 import { ModManagerView } from './components/ModManagerView';
 import { StorageManagerView } from './components/StorageManagerView';
 import { SettingsModal } from './components/SettingsModal';
@@ -134,7 +135,17 @@ export const App: React.FC = () => {
             mods={mods}
             onOpenMods={() => setCurrentTab('mods')}
             onOpenStorage={() => setCurrentTab('storage')}
+            onOpenMultiplayer={() => setCurrentTab('multiplayer')}
             webGpuName={webGpuAdapterName}
+          />
+        )}
+
+        {currentTab === 'multiplayer' && (
+          <MultiplayerView
+            onStartOnlineRace={() => {
+              runtime.startSession();
+              setCurrentTab('game');
+            }}
           />
         )}
 
