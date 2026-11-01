@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Need for Speed: Most Wanted</title>
+<style>
+  :root { color-scheme: dark; font: 15px/1.5 system-ui, sans-serif; background: #101217; color: #e6e8ee; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; }
+  header { height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 24px; border-bottom: 1px solid #2c313d; }
+  header strong { flex: 1; font-size: 15px; }
+  a { color: #9eb8ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; border: 1px solid #3d4759; border-radius: 8px; padding: 9px 16px; background: #202938; color: #e6e8ee; cursor: pointer; }
+  button.primary { background: #6f93ff; color: #0b1020; border-color: #6f93ff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  button:focus-visible, a:focus-visible { outline: 2px solid #9eb8ff; outline-offset: 4px; }
+  main { min-height: calc(100vh - 64px); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .card { width: min(100%, 480px); padding: 32px; border: 1px solid #2c313d; border-radius: 16px; background: #1b1e26; }
+  h1 { font-size: 24px; line-height: 1.25; margin: 0 0 12px; }
+  p { color: #aeb7c7; margin: 0 0 24px; }
+  #message { margin: 16px 0 0; font-size: 14px; }
+  #input-hints { color: #aeb7c7; font-size: 13px; text-align: center; margin: 12px 0 0; max-width: 900px; }
+  iframe { display: block; border: 0; background: #000; width: min(1280px, calc(100vw - 48px), calc((100vh - 160px) * 16 / 9)); aspect-ratio: 16 / 9; }
+  [hidden] { display: none !important; }
+  @media (max-width: 600px) { header { padding: 0 12px; gap: 12px; } main { padding: 12px; } .card { padding: 24px; } iframe { width: min(calc(100vw - 24px), calc((100vh - 184px) * 16 / 9)); } }
+</style>
+</head>
+<body>
+<header><a href="../">Library</a><strong>Need for Speed: Most Wanted</strong><button id="stop" hidden>Stop game</button></header>
+<main>
+  <section class="card" id="welcome">
+    <h1>Need for Speed: Most Wanted</h1>
+    <p>Click Start to play. Your saves stay in this browser. Game data loads
+       as needed while you play. Use Stop game to close the game.</p>
+    <button class="primary" id="start">Start game</button>
+    <p id="message" role="status" aria-live="polite"></p>
+  </section>
+  <div id="stage" hidden></div>
+  <p id="input-hints" role="status" aria-live="polite" hidden></p>
+</main>
+<script>
+"use strict";
+const startButton = document.getElementById("start");
+const stopButton = document.getElementById("stop");
+const welcome = document.getElementById("welcome");
+const stage = document.getElementById("stage");
+const message = document.getElementById("message");
+const hints = document.getElementById("input-hints");
+let frame = null;
+let releaseSession = null;
+let pending = false;
+
+// One origin-wide lock owns the runtime document. Restoring this page never
+// instantiates Wasm or starts workers until the player explicitly starts it.
+startButton.addEventListener("click", async () => {
+  if (pending || frame) return;
+  if (!navigator.locks) {
+    message.textContent = "This browser cannot manage game sessions. Open this page in Chrome or Edge.";
+    return;
+  }
+  pending = true;
+  startButton.disabled = true;
+  message.textContent = "Starting…";
+  const id = location.pathname.split("/").filter(Boolean).filter(p => !p.includes(".")).pop();
+  try {
+    await navigator.locks.request(`recomp-player-${id}`, {ifAvailable: true}, async lock => {
+      if (!lock) {
+        message.textContent = "This game is already running in another tab. Stop it there before starting here.";
+        return;
+      }
+      await new Promise(resolve => {
+        releaseSession = resolve;
+        frame = document.createElement("iframe");
+        frame.title = document.title;
+        frame.src = `runtime.html${location.search}`;
+        stage.append(frame);
+        stage.hidden = false;
+        welcome.hidden = true;
+        stopButton.hidden = false;
+        hints.hidden = false;
+        stopButton.focus();
+      });
+    });
+  } catch (error) {
+    stopGame();
+    message.textContent = `The game could not start: ${error.message}`;
+  } finally {
+    pending = false;
+    startButton.disabled = false;
+  }
+});
+
+// Removing the document tears down its owned workers. Release the session
+// only after removal; imported game files and committed saves stay in OPFS.
+function stopGame() {
+  frame?.remove();
+  frame = null;
+  stage.hidden = true;
+  welcome.hidden = false;
+  stopButton.hidden = true;
+  hints.hidden = true;
+  hints.textContent = "";
+  releaseSession?.();
+  releaseSession = null;
+  message.textContent = "Game stopped. Cached files and saves are kept.";
+  startButton.focus();
+}
+stopButton.addEventListener("click", stopGame);
+window.addEventListener("pagehide", stopGame);
+window.addEventListener("message", event => {
+  if (event.origin === location.origin && event.source === frame?.contentWindow &&
+      event.data?.type === "recomp-input-hints") hints.textContent = event.data.text;
+});
+</script>
+</body>
+</html>
