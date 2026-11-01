@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameSettings, ModItem } from '../types';
-import { Square, Pause, Play, Monitor, Zap } from 'lucide-react';
+import { Square, Pause, Play, Monitor, Zap, Eye, Terminal } from 'lucide-react';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -16,6 +16,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   webGpuAdapterName,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [activeView, setActiveView] = useState<'engine' | 'cockpit'>('engine');
   const [fps, setFps] = useState(120);
   const [isPaused, setIsPaused] = useState(false);
   const [showTelemetry, setShowTelemetry] = useState(true);
@@ -37,7 +39,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const { width, height } = getDimensions();
 
+  // Cockpit simulator loop when in cockpit view
   useEffect(() => {
+    if (activeView !== 'cockpit') return;
+
     let animId: number;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -51,19 +56,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     let gear = 1;
     let nitrousActive = false;
 
-    // Key handlers for in-canvas driving simulation
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'KeyX' || e.code === 'ShiftLeft') {
-        nitrousActive = true;
-      }
-      if (e.code === 'Escape') {
-        setIsPaused((p) => !p);
-      }
+      if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = true;
+      if (e.code === 'Escape') setIsPaused((p) => !p);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'KeyX' || e.code === 'ShiftLeft') {
-        nitrousActive = false;
-      }
+      if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -83,25 +81,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         rpm = 1100 + ((speedMph * 50) % 6800);
         gear = Math.min(6, Math.floor(speedMph / 32) + 1);
 
-        if (nitrousActive) {
-          setNosLevel((prev) => Math.max(0, prev - 0.25));
-        } else {
-          setNosLevel((prev) => Math.min(100, prev + 0.1));
-        }
+        if (nitrousActive) setNosLevel((p) => Math.max(0, p - 0.25));
+        else setNosLevel((p) => Math.min(100, p + 0.1));
       }
 
       // Sky and ambient environment (Rockport dusk)
       const grad = ctx.createLinearGradient(0, 0, 0, height);
       grad.addColorStop(0, '#0c1017');
       grad.addColorStop(0.4, '#171c26');
-      grad.addColorStop(0.45, '#2b2319'); // warm Most Wanted golden dusk haze
+      grad.addColorStop(0.45, '#2b2319');
       grad.addColorStop(1, '#090b0e');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
       const horizon = height * 0.44;
 
-      // City silhouette
+      // City skyline silhouette
       ctx.fillStyle = '#0f141d';
       const buildingWidth = 35;
       for (let i = 0; i < width; i += buildingWidth) {
@@ -129,7 +124,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.lineTo(width * 0.88, height);
       ctx.stroke();
 
-      // Road Lane Markers (animated)
+      // Road Lane Markers
       const dashOffset = (time * 0.15) % 80;
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
@@ -141,19 +136,17 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Speedometer & Tachometer HUD (bottom right)
+      // Speedometer & Tachometer HUD
       const gaugeX = width - 180;
       const gaugeY = height - 160;
       const radius = 90;
 
-      // Gauge background
       ctx.beginPath();
       ctx.arc(gaugeX, gaugeY, radius, 0.75 * Math.PI, 2.25 * Math.PI);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
       ctx.lineWidth = 10;
       ctx.stroke();
 
-      // RPM dial fill
       const rpmRatio = Math.max(0, Math.min(1, (rpm - 1000) / 7000));
       ctx.beginPath();
       ctx.arc(gaugeX, gaugeY, radius, 0.75 * Math.PI, (0.75 + rpmRatio * 1.5) * Math.PI);
@@ -161,7 +154,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.lineWidth = 10;
       ctx.stroke();
 
-      // Digital speed readout
+      // Digital speed
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 42px "Chakra Petch", sans-serif';
       ctx.textAlign = 'center';
@@ -175,7 +168,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = '#06b6d4';
       ctx.fillText(`GEAR ${gear}`, gaugeX, gaugeY - 32);
 
-      // Nitrous N2O Bar (left of tachometer)
+      // Nitrous N2O Bar
       const nosX = gaugeX - 110;
       const nosY = gaugeY - 60;
       const nosH = 120;
@@ -191,7 +184,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = '#06b6d4';
       ctx.fillText('NOS', nosX + 7, nosY + nosH + 14);
 
-      // Mini-map circle (bottom left)
+      // Mini-map circle
       const mapX = 140;
       const mapY = height - 140;
       const mapR = 85;
@@ -203,14 +196,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // Police Radar Range on Minimap
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(mapX, mapY, 55, 0, 2 * Math.PI);
-      ctx.stroke();
-
-      // Player Arrow on Minimap
       ctx.fillStyle = '#f59e0b';
       ctx.beginPath();
       ctx.moveTo(mapX, mapY - 14);
@@ -220,7 +205,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.closePath();
       ctx.fill();
 
-      // Paused banner
       if (isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
         ctx.fillRect(0, 0, width, height);
@@ -228,9 +212,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ctx.font = 'bold 48px "Chakra Petch", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('GAME PAUSED', width / 2, height / 2);
-        ctx.font = '16px "Inter", sans-serif';
-        ctx.fillStyle = '#cbd5e1';
-        ctx.fillText('Press ESC or Click Resume to Continue', width / 2, height / 2 + 40);
       }
 
       animId = requestAnimationFrame(render);
@@ -242,11 +223,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [width, height, isPaused, nosLevel]);
+  }, [width, height, isPaused, nosLevel, activeView]);
 
   return (
     <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '24px 20px' }}>
-      {/* Top Session Bar */}
+      {/* Top Session Control Bar */}
       <div
         className="glass-panel"
         style={{
@@ -281,11 +262,53 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Dual Mode View Switcher */}
+          <div style={{ display: 'flex', background: '#121620', padding: '3px', borderRadius: '8px', border: '1px solid #232b3c' }}>
+            <button
+              onClick={() => setActiveView('engine')}
+              style={{
+                background: activeView === 'engine' ? '#f59e0b' : 'transparent',
+                color: activeView === 'engine' ? '#000' : '#94a3b8',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Terminal size={14} />
+              WebGPU Engine View
+            </button>
+            <button
+              onClick={() => setActiveView('cockpit')}
+              style={{
+                background: activeView === 'cockpit' ? '#f59e0b' : 'transparent',
+                color: activeView === 'cockpit' ? '#000' : '#94a3b8',
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Eye size={14} />
+              Cockpit HUD Simulator
+            </button>
+          </div>
+
           <button
             onClick={() => setShowTelemetry(!showTelemetry)}
             className="btn btn-secondary"
-            style={{ fontSize: '12.5px', padding: '7px 14px' }}
+            style={{ fontSize: '12px', padding: '6px 12px' }}
           >
             <Monitor size={14} />
             {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
@@ -293,7 +316,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           <button
             onClick={() => setIsPaused(!isPaused)}
             className="btn btn-secondary"
-            style={{ fontSize: '12.5px', padding: '7px 14px' }}
+            style={{ fontSize: '12px', padding: '6px 12px' }}
           >
             {isPaused ? <Play size={14} fill="currentColor" /> : <Pause size={14} fill="currentColor" />}
             {isPaused ? 'Resume' : 'Pause'}
@@ -301,7 +324,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           <button
             onClick={onStopGame}
             className="btn btn-danger"
-            style={{ fontSize: '12.5px', padding: '7px 16px' }}
+            style={{ fontSize: '12px', padding: '6px 14px' }}
           >
             <Square size={14} fill="currentColor" />
             Quit Game
@@ -309,7 +332,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         </div>
       </div>
 
-      {/* Canvas Viewport */}
+      {/* Main Game Viewport */}
       <div
         style={{
           position: 'relative',
@@ -318,19 +341,37 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           overflow: 'hidden',
           boxShadow: '0 24px 48px rgba(0, 0, 0, 0.9)',
           border: '1px solid #273042',
+          minHeight: '640px',
+          height: '75vh',
         }}
       >
-        <canvas
-          ref={canvasRef}
-          width={width}
-          height={height}
-          style={{
-            display: 'block',
-            width: '100%',
-            height: 'auto',
-            aspectRatio: `${width} / ${height}`,
-          }}
-        />
+        {activeView === 'engine' ? (
+          <iframe
+            ref={iframeRef}
+            src="/nfsmw/runtime.html"
+            title="Need for Speed Most Wanted WebGPU Engine"
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              display: 'block',
+              backgroundColor: '#000',
+            }}
+            allow="cross-origin-isolated; autoplay; gamepad; fullscreen"
+          />
+        ) : (
+          <canvas
+            ref={canvasRef}
+            width={width}
+            height={height}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        )}
 
         {/* Telemetry HUD Overlay */}
         {showTelemetry && (
@@ -339,7 +380,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               position: 'absolute',
               top: '16px',
               left: '16px',
-              backgroundColor: 'rgba(10, 14, 23, 0.88)',
+              backgroundColor: 'rgba(10, 14, 23, 0.9)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: '8px',
@@ -348,6 +389,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               color: '#94a3b8',
               lineHeight: 1.6,
               maxWidth: '320px',
+              pointerEvents: 'none',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -358,7 +400,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             <div>AF Filtering: <span style={{ color: '#10b981' }}>{settings.anisotropicFiltering}x</span></div>
             <div>Active Mods: <span style={{ color: '#f59e0b' }}>{mods.filter((m) => m.enabled).length} Overlays</span></div>
             <div>VFS Memory: <span style={{ color: '#cbd5e1' }}>512 MiB Initial Heap</span></div>
-            <div>Driving Controls: <span style={{ color: '#fff' }}>Arrows / WASD • X / Shift for NOS</span></div>
+            <div>Controls: <span style={{ color: '#fff' }}>Arrows / WASD • X / Shift for NOS</span></div>
           </div>
         )}
       </div>

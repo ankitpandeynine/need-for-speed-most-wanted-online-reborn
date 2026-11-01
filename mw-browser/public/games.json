@@ -1,0 +1,75 @@
+[
+  {
+    "id": "nfsmw",
+    "title": "Need for Speed: Most Wanted",
+    "executable": "speed.exe",
+    "sha256": "80774c2e5d619b4f120b48d4462896fd504c263399d203a238769cffde1d253c",
+    "requiredDirs": [
+      "CARS",
+      "FRONTEND",
+      "GLOBAL",
+      "SOUND",
+      "TRACKS"
+    ],
+    "exclude": [
+      "Uninstall",
+      "Support",
+      "scripts",
+      "SAVE",
+      "foobar",
+      "*.dll",
+      "*_inst.exe",
+      "*.txt",
+      "server.cfg"
+    ],
+    "store": "",
+    "installNames": [
+      "Need for Speed Most Wanted",
+      "NFS Most Wanted",
+      "Most Wanted"
+    ],
+    "minFreeMb": 300,
+    "streamAssets": true,
+    "inputHints": {
+      "bindings": {
+        "left_stick": "horizontal_arrows",
+        "right_stick": "none",
+        "dpad": "arrows",
+        "cursor_speed": 900,
+        "cross": "key:Space+Return",
+        "circle": "key:X",
+        "square": "key:G",
+        "triangle": "key:C",
+        "l1": "key:L",
+        "r1": "key:LShift",
+        "l2": "key:Down",
+        "r2": "key:Up",
+        "start": "key:Escape",
+        "select": "key:R",
+        "l3": "key:LCtrl",
+        "r3": "key:L",
+        "ps": "action:settings"
+      },
+      "actions": {
+        "confirm": "key:Return",
+        "back": "key:Escape",
+        "accelerate": "key:Up",
+        "brake": "key:Down",
+        "steer": "horizontal_arrows",
+        "e-brake": "key:Space",
+        "nitrous": "key:X",
+        "speedbreaker": "key:G",
+        "camera": "key:C",
+        "look back": "key:L",
+        "shift up": "key:LShift",
+        "reset car": "key:R"
+      },
+      "aliases": {
+        "W": "Up",
+        "S": "Down",
+        "A": "Left",
+        "D": "Right"
+      }
+    }
+  }
+]

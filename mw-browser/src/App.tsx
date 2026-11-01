@@ -144,6 +144,10 @@ export const App: React.FC = () => {
             onToggleMod={handleToggleMod}
             onUpdatePriority={handleUpdatePriority}
             onInstallMod={handleInstallMod}
+            onResetDefaults={() => {
+              modManager.resetToPopularDefaults();
+              setMods(modManager.getMods());
+            }}
           />
         )}
 
