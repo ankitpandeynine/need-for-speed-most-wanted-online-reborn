@@ -117,7 +117,15 @@ export const App: React.FC = () => {
         onToggleGame={handleToggleGame}
       />
 
-      <main style={{ flex: 1, paddingBottom: '60px' }}>
+      <main
+        style={{
+          flex: 1,
+          paddingBottom: currentTab === 'game' ? '0px' : '60px',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+        }}
+      >
         {currentTab === 'game' && isRunning && (
           <GameCanvas
             settings={settings}
