@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StorageStatus } from '../types';
-import { CheckCircle2, AlertCircle, FolderOpen, Trash2, ShieldCheck, Database } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FolderOpen, Trash2, ShieldCheck, Database, Zap, RefreshCw } from 'lucide-react';
 import { PINNED_SPEED_EXE_SHA256 } from '../services/storage';
 
 interface StorageManagerViewProps {
@@ -27,18 +27,107 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
     return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
   };
 
-  const handleSimulateImport = () => {
-    setImporting(true);
-    setImportMessage('Verifying speed.exe SHA-256 fingerprint...');
-    setTimeout(() => {
-      setImportMessage('Caching CARS, GLOBAL, TRACKS and SOUND banks in OPFS...');
-      setTimeout(() => {
-        onImportComplete(1406);
-        setImporting(false);
-        setImportMessage('Game installation validated and cached successfully!');
-        setTimeout(() => setImportMessage(null), 4000);
-      }, 1500);
-    }, 1200);
+  // Real OPFS import using File System Access API
+  const handleRealImport = async () => {
+    try {
+      if (!('showDirectoryPicker' in window)) {
+        alert('Your browser does not support the File System Access API. Please use Google Chrome, Brave, or Microsoft Edge.');
+        return;
+      }
+
+      setImporting(true);
+      setImportMessage('Select your "Need For Speed Most Wanted Black Edition" folder in the file dialog...');
+
+      const handle = await (window as any).showDirectoryPicker({ id: 'game-nfsmw', mode: 'read' });
+
+      setImportMessage('Scanning game files and indexing directory structure...');
+
+      const worker = new Worker('/worker.js', { type: 'module' });
+      let nextId = 1;
+
+      worker.onmessage = ({ data }) => {
+        if (data.progress) {
+          const p = data.progress;
+          const percent = p.bytesTotal ? Math.floor((p.bytesDone / p.bytesTotal) * 100) : 0;
+          setImportMessage(`Caching into OPFS: ${percent}% (${formatBytes(p.bytesDone)} / ${formatBytes(p.bytesTotal)}) - ${p.current || ''}`);
+          return;
+        }
+
+        if (data.id === nextId) {
+          worker.terminate();
+          setImporting(false);
+          if (data.error) {
+            setImportMessage(`Import error: ${data.error}`);
+          } else {
+            setImportMessage('Game imported successfully into browser storage! You can launch now.');
+            onImportComplete(1364);
+            setTimeout(() => setImportMessage(null), 5000);
+          }
+        }
+      };
+
+      const games = await fetch('/games.json').then((r) => r.json());
+      const game = games[0];
+
+      worker.postMessage({
+        id: nextId,
+        cmd: 'import',
+        game,
+        kind: 'handle',
+        handle,
+      });
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setImportMessage(`Could not select folder: ${err.message}`);
+      }
+      setImporting(false);
+    }
+  };
+
+  // Fast local streaming preparation
+  const handleSetupStream = async () => {
+    try {
+      setImporting(true);
+      setImportMessage('Preparing local disk stream (pinning speed.exe)...');
+
+      const worker = new Worker('/worker.js', { type: 'module' });
+      let nextId = 1;
+
+      worker.onmessage = ({ data }) => {
+        if (data.progress) {
+          const p = data.progress;
+          const percent = p.bytesTotal ? Math.floor((p.bytesDone / p.bytesTotal) * 100) : 0;
+          setImportMessage(`Streaming speed.exe: ${percent}% (${formatBytes(p.bytesDone)} / ${formatBytes(p.bytesTotal)})`);
+          return;
+        }
+
+        if (data.id === nextId) {
+          worker.terminate();
+          setImporting(false);
+          if (data.error) {
+            setImportMessage(`Setup error: ${data.error}`);
+          } else {
+            setImportMessage('Local streaming setup complete! Launch Game now to play.');
+            onImportComplete(1364);
+            setTimeout(() => setImportMessage(null), 5000);
+          }
+        }
+      };
+
+      const games = await fetch('/games.json').then((r) => r.json());
+      const game = games[0];
+      const manifestUrl = new URL(game.hostedAssets, new URL('/games.json', location.href)).href;
+
+      worker.postMessage({
+        id: nextId,
+        cmd: 'streamSetup',
+        game,
+        manifestUrl,
+      });
+    } catch (err: any) {
+      setImportMessage(`Stream setup error: ${err.message}`);
+      setImporting(false);
+    }
   };
 
   return (
@@ -126,7 +215,8 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
       </div>
 
       {importMessage && (
-        <div style={{ padding: '12px 16px', background: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.3)', borderRadius: '8px', color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+        <div style={{ padding: '14px 18px', background: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '8px', color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', fontSize: '14px' }}>
+          <RefreshCw size={18} className={importing ? 'spin' : ''} />
           <span>{importMessage}</span>
         </div>
       )}
@@ -135,29 +225,39 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
       <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            Import Game Files
+            Import Game Files & Setup
           </h4>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
-            Select your retail Need for Speed Most Wanted folder or ISO image to cache assets in your browser.
+          <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+            Choose either <strong>Instant Local Stream</strong> (zero waiting) or <strong>Import Folder</strong> to cache assets in your browser.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
-            onClick={handleSimulateImport}
+            onClick={handleSetupStream}
             disabled={importing}
             className="btn btn-primary"
-            style={{ fontSize: '14px', padding: '10px 20px' }}
+            style={{ fontSize: '13px', padding: '10px 18px' }}
+          >
+            <Zap size={16} />
+            Quick Stream Local Game
+          </button>
+
+          <button
+            onClick={handleRealImport}
+            disabled={importing}
+            className="btn btn-secondary"
+            style={{ fontSize: '13px', padding: '10px 18px' }}
           >
             <FolderOpen size={16} />
-            {storage.hasSpeedExe ? 'Re-index Game Files' : 'Import Game Directory'}
+            Import Game Folder
           </button>
 
           {storage.hasSpeedExe && (
             <button
               onClick={onClearStorage}
               className="btn btn-danger"
-              style={{ fontSize: '14px', padding: '10px 16px' }}
+              style={{ fontSize: '13px', padding: '10px 16px' }}
             >
               <Trash2 size={16} />
               Clear Storage
