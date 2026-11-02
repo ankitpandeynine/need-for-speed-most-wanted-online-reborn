@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom } from '../types';
-import { Square, Pause, Play, Monitor, Zap, Eye, AlertCircle, ArrowRight } from 'lucide-react';
+import { Square, Pause, Play, Monitor, Zap, Eye, AlertCircle, ArrowRight, Maximize2, Minimize2 } from 'lucide-react';
 import { MultiplayerService } from '../services/multiplayer';
 
 interface GameCanvasProps {
@@ -27,6 +27,34 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const [speedBreakerLevel, setSpeedBreakerLevel] = useState(100);
   const [currentRoom, setCurrentRoom] = useState<LobbyRoom | null>(MultiplayerService.getCurrentRoom());
   const [remoteRivals, setRemoteRivals] = useState<VehicleTelemetry[]>([]);
+  const viewportContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (viewportContainerRef.current?.requestFullscreen) {
+        viewportContainerRef.current.requestFullscreen().catch((err) => {
+          console.error('Error enabling fullscreen:', err);
+        });
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch((err) => {
+          console.error('Error exiting fullscreen:', err);
+        });
+      }
+    }
+  };
 
   // Resolution dimensions
   const getDimensions = () => {
@@ -83,6 +111,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       if (e.code === 'KeyD' || e.code === 'ArrowRight') steerX = 1;
       if (e.code === 'KeyW' || e.code === 'ArrowUp') speedMph = Math.min(228, speedMph + 1.2);
       if (e.code === 'KeyS' || e.code === 'ArrowDown') speedMph = Math.max(0, speedMph - 2.5);
+      if (e.code === 'KeyF' && !e.ctrlKey && !e.metaKey) toggleFullscreen();
       if (e.code === 'Escape') setIsPaused((p) => !p);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -601,6 +630,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </button>
 
           <button
+            onClick={toggleFullscreen}
+            className="btn btn-secondary"
+            style={{ padding: '6px 12px', fontSize: '12px' }}
+            title={isFullscreen ? 'Exit Fullscreen (F)' : 'Fullscreen Game (F)'}
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          </button>
+
+          <button
             onClick={onStopGame}
             className="btn btn-danger"
             style={{ padding: '6px 14px', fontSize: '12px' }}
@@ -612,17 +651,51 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       {/* Main Game Viewport */}
       <div
+        ref={viewportContainerRef}
         style={{
-          position: 'relative',
+          position: isFullscreen ? 'fixed' : 'relative',
+          inset: isFullscreen ? 0 : undefined,
+          top: isFullscreen ? 0 : undefined,
+          left: isFullscreen ? 0 : undefined,
+          width: isFullscreen ? '100vw' : '100%',
+          height: isFullscreen ? '100vh' : '75vh',
+          zIndex: isFullscreen ? 99999 : 10,
           backgroundColor: '#000',
-          borderRadius: '12px',
+          borderRadius: isFullscreen ? 0 : '12px',
           overflow: 'hidden',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.9)',
-          border: '1px solid #273042',
-          minHeight: '640px',
-          height: '75vh',
+          boxShadow: isFullscreen ? 'none' : '0 24px 48px rgba(0, 0, 0, 0.9)',
+          border: isFullscreen ? 'none' : '1px solid #273042',
+          minHeight: isFullscreen ? '100vh' : '640px',
         }}
       >
+        {/* Floating Quick Fullscreen Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: 'rgba(10, 14, 23, 0.82)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            color: '#fff',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12.5px',
+            fontWeight: 700,
+            zIndex: 50,
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.7)',
+            transition: 'all 0.2s ease',
+          }}
+          title={isFullscreen ? 'Exit Fullscreen (F)' : 'Maximize to Fullscreen (F)'}
+        >
+          {isFullscreen ? <Minimize2 size={15} color="#f59e0b" /> : <Maximize2 size={15} color="#f59e0b" />}
+          <span>{isFullscreen ? 'Exit Fullscreen (F)' : 'Fullscreen (F)'}</span>
+        </button>
         {activeView === 'cockpit' ? (
           <canvas
             ref={canvasRef}
