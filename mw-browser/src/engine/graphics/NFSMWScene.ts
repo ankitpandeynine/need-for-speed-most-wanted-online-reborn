@@ -147,6 +147,12 @@ export class NFSMWScene {
     this.currentView = view;
   }
 
+  public changeVehicle(vehicleId: string) {
+    this.scene.remove(this.playerCar.root);
+    this.playerCar = CarModelBuilder.buildCar(vehicleId);
+    this.scene.add(this.playerCar.root);
+  }
+
   public update(physics: VehiclePhysics, isBraking: boolean) {
     if (!this.isRunning) return;
 
@@ -244,29 +250,29 @@ export class NFSMWScene {
 
     switch (this.currentView) {
       case 'chase-far': {
-        // Classic dynamic NFSMW chase cam with spring lag
+        // Classic dynamic NFSMW chase cam with spring follow
         const targetCamX = carPos.x * 0.75 + shake;
-        const targetCamY = carPos.y + 2.5 + (physics.speedMph > 100 ? 0.2 : 0);
-        const targetCamZ = carPos.z - 7.5;
+        const targetCamY = carPos.y + 2.6 + (physics.speedMph > 100 ? 0.25 : 0);
+        const targetCamZ = carPos.z - 8.4;
 
-        this.camera.position.x += (targetCamX - this.camera.position.x) * 0.15;
-        this.camera.position.y += (targetCamY - this.camera.position.y) * 0.15;
+        this.camera.position.x += (targetCamX - this.camera.position.x) * 0.16;
+        this.camera.position.y += (targetCamY - this.camera.position.y) * 0.16;
         this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.22;
 
-        this.camera.lookAt(carPos.x, carPos.y + 1.1, carPos.z + 10);
+        this.camera.lookAt(carPos.x, carPos.y + 1.2, carPos.z + 12);
         break;
       }
       case 'chase-close': {
-        // Tight, low angle just behind the carbon rear wing
+        // Dynamic low angle showcasing the widebody, GT wing, and twin exhausts
         const targetCamX = carPos.x * 0.85 + shake;
-        const targetCamY = carPos.y + 1.7;
-        const targetCamZ = carPos.z - 4.6;
+        const targetCamY = carPos.y + 1.95;
+        const targetCamZ = carPos.z - 5.8;
 
         this.camera.position.x += (targetCamX - this.camera.position.x) * 0.2;
         this.camera.position.y += (targetCamY - this.camera.position.y) * 0.2;
         this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.25;
 
-        this.camera.lookAt(carPos.x, carPos.y + 0.9, carPos.z + 8);
+        this.camera.lookAt(carPos.x, carPos.y + 1.1, carPos.z + 10);
         break;
       }
       case 'hood': {

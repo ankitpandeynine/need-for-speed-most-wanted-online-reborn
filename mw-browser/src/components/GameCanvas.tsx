@@ -6,6 +6,7 @@ import { NFSMWScene, CameraViewMode } from '../engine/graphics/NFSMWScene';
 import { VehiclePhysics, VehicleInput } from '../engine/physics/VehiclePhysics';
 import { NFSMWSoundEngine } from '../engine/audio/NFSMWSoundEngine';
 import { NFSMWHUD } from './NFSMWHUD';
+import { VEHICLE_CATALOG } from '../engine/graphics/CarModelBuilder';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -27,6 +28,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Active View: 'game-3d' (Authentic 3D NFS MW Experience) or 'recomp-wasm' (Low-level recompiled binary debugger)
   const [activeView, setActiveView] = useState<'game-3d' | 'recomp-wasm'>('game-3d');
   const [cameraView, setCameraView] = useState<CameraViewMode>('chase-far');
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('bmw-m3-gtr');
 
   const [fps, setFps] = useState(120);
   const [isPaused, setIsPaused] = useState(false);
@@ -337,8 +339,32 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             NFSMW 2005 3D ENGINE
           </span>
           <span style={{ color: '#475569' }}>|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            Car: <span style={{ color: '#f59e0b', fontWeight: 800 }}>BMW M3 GTR (E46)</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            Car:
+            <select
+              value={selectedVehicle}
+              onChange={(e) => {
+                const vid = e.target.value;
+                setSelectedVehicle(vid);
+                sceneRef.current?.changeVehicle(vid);
+              }}
+              style={{
+                background: '#0e1118',
+                color: '#f59e0b',
+                border: '1px solid #333d4d',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontWeight: 800,
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              {VEHICLE_CATALOG.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
           </span>
           <span style={{ color: '#475569' }}>|</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>
@@ -420,6 +446,34 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 display: 'block',
               }}
             />
+
+            {/* High-Speed Radial Motion Blur & Speed Lines */}
+            {speedMph > 120 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: `radial-gradient(ellipse at center, transparent 40%, rgba(245, 158, 11, ${Math.min(0.28, (speedMph - 120) / 380)}) 85%, rgba(255, 255, 255, ${Math.min(0.22, (speedMph - 120) / 450)}) 100%)`,
+                  mixBlendMode: 'screen',
+                  zIndex: 22,
+                }}
+              />
+            )}
+
+            {/* Nitrous Blue Warp Glow */}
+            {isNosActive && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: 'radial-gradient(ellipse at center, transparent 35%, rgba(6, 182, 212, 0.22) 85%, rgba(14, 165, 233, 0.35) 100%)',
+                  mixBlendMode: 'screen',
+                  zIndex: 23,
+                }}
+              />
+            )}
 
             {/* Authentic Need for Speed Most Wanted 2005 HUD */}
             <NFSMWHUD

@@ -2,10 +2,77 @@
  * Need for Speed: Most Wanted (2005) - 3D Car Model Builder
  * Constructs high-fidelity 3D vehicles:
  * 1. BMW M3 GTR E46 (The Hero Car with widebody aero, side exhausts, GT wing, BBS rims, dual racing stripes)
- * 2. Rockport Police Interceptor (Sgt. Cross style pursuit cruiser with emergency lightbars and bullbar)
+ * 2. Porsche Carrera GT (Exotic V10 supercar in Guards Red)
+ * 3. Corvette C6.R (High-revving American GT in Competition Yellow)
+ * 4. Ford GT (Supercharged Le Mans racer in Heritage Blue)
+ * 5. Rockport Police Interceptor (Sgt. Cross style pursuit cruiser with emergency lightbars and bullbar)
  */
 
 import * as THREE from 'three';
+
+export interface VehicleOption {
+  id: string;
+  name: string;
+  manufacturer: string;
+  category: 'Blacklist Hero' | 'Exotic' | 'Muscle' | 'Tuner';
+  primaryColor: number;
+  stripeColor: number;
+  topSpeedMph: number;
+  accelRating: number;
+  handlingRating: number;
+  description: string;
+}
+
+export const VEHICLE_CATALOG: VehicleOption[] = [
+  {
+    id: 'bmw-m3-gtr',
+    name: 'BMW M3 GTR (E46)',
+    manufacturer: 'BMW Motorsport',
+    category: 'Blacklist Hero',
+    primaryColor: 0xdae2eb,
+    stripeColor: 0x123c84,
+    topSpeedMph: 245,
+    accelRating: 98,
+    handlingRating: 95,
+    description: 'The legendary #15 hero car of Need for Speed Most Wanted (2005) with 4.0L P60 V8 and straight-cut dog-box transmission.',
+  },
+  {
+    id: 'carrera-gt',
+    name: 'Porsche Carrera GT',
+    manufacturer: 'Porsche',
+    category: 'Exotic',
+    primaryColor: 0xd91616,
+    stripeColor: 0x181818,
+    topSpeedMph: 240,
+    accelRating: 94,
+    handlingRating: 96,
+    description: 'Purebred 5.7L naturally aspirated V10 supercar in Guards Red with screaming high-pitch exhaust.',
+  },
+  {
+    id: 'corvette-c6',
+    name: 'Corvette C6.R',
+    manufacturer: 'Chevrolet',
+    category: 'Muscle',
+    primaryColor: 0xf5c518,
+    stripeColor: 0x111111,
+    topSpeedMph: 236,
+    accelRating: 92,
+    handlingRating: 90,
+    description: 'American 7.0L LS7.R V8 endurance beast in Competition Yellow with aggressive roar.',
+  },
+  {
+    id: 'ford-gt',
+    name: 'Ford GT',
+    manufacturer: 'Ford',
+    category: 'Exotic',
+    primaryColor: 0x2563eb,
+    stripeColor: 0xf8fafc,
+    topSpeedMph: 238,
+    accelRating: 95,
+    handlingRating: 92,
+    description: 'Mid-engine supercharged 5.4L V8 with retro Le Mans styling and white racing stripes.',
+  },
+];
 
 export interface CarComponents {
   root: THREE.Group;
@@ -37,16 +104,16 @@ export interface PoliceCarComponents {
 
 export class CarModelBuilder {
   /**
-   * Builds the iconic Need for Speed: Most Wanted BMW M3 GTR (E46).
+   * Builds the selected car by vehicle ID (defaults to BMW M3 GTR).
    */
-  public static buildBMWM3GTR(): CarComponents {
+  public static buildCar(vehicleId: string = 'bmw-m3-gtr'): CarComponents {
+    const config = VEHICLE_CATALOG.find((v) => v.id === vehicleId) || VEHICLE_CATALOG[0];
     const root = new THREE.Group();
-    root.name = 'BMWM3GTR';
+    root.name = config.name;
 
     // Materials
-    // Metallic Silver-White clearcoat paint
     const carPaintMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xdae2eb,
+      color: config.primaryColor,
       metalness: 0.85,
       roughness: 0.22,
       clearcoat: 1.0,
@@ -54,22 +121,19 @@ export class CarModelBuilder {
       reflectivity: 0.9,
     });
 
-    // Dark Blue M3 GTR Racing Stripes
     const stripeMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x123c84,
+      color: config.stripeColor,
       metalness: 0.7,
       roughness: 0.28,
       clearcoat: 1.0,
     });
 
-    // Carbon Fiber / Dull Plastic aero material
     const carbonMaterial = new THREE.MeshStandardMaterial({
       color: 0x16181b,
       roughness: 0.45,
       metalness: 0.35,
     });
 
-    // Tinted Glass
     const glassMaterial = new THREE.MeshPhysicalMaterial({
       color: 0x111c28,
       metalness: 0.2,
@@ -79,7 +143,6 @@ export class CarModelBuilder {
       opacity: 0.88,
     });
 
-    // Chrome / Polished Metal
     const chromeMaterial = new THREE.MeshStandardMaterial({
       color: 0xeeeeee,
       metalness: 0.95,
@@ -101,14 +164,14 @@ export class CarModelBuilder {
     cabinMesh.castShadow = true;
     root.add(cabinMesh);
 
-    // Windshield (Front rake)
+    // Windshield
     const windshieldGeo = new THREE.PlaneGeometry(1.42, 0.62);
     const windshieldMesh = new THREE.Mesh(windshieldGeo, glassMaterial);
     windshieldMesh.position.set(0, 0.85, 0.95);
     windshieldMesh.rotation.x = -Math.PI / 3.4;
     root.add(windshieldMesh);
 
-    // Rear Window (Fastback rake)
+    // Rear Window
     const rearWinGeo = new THREE.PlaneGeometry(1.4, 0.68);
     const rearWinMesh = new THREE.Mesh(rearWinGeo, glassMaterial);
     rearWinMesh.position.set(0, 0.82, -1.35);
@@ -127,7 +190,7 @@ export class CarModelBuilder {
     rightWin.rotation.y = Math.PI / 2;
     root.add(rightWin);
 
-    // 3. WIDEBODY FENDER FLARES (Front & Rear)
+    // 3. WIDEBODY FENDER FLARES
     const flareGeo = new THREE.BoxGeometry(2.08, 0.36, 0.82);
     const frontFlares = new THREE.Mesh(flareGeo, carPaintMaterial);
     frontFlares.position.set(0, 0.48, 1.25);
@@ -137,13 +200,12 @@ export class CarModelBuilder {
     rearFlares.position.set(0, 0.5, -1.25);
     root.add(rearFlares);
 
-    // 4. ICONIC HOOD WITH BULGE AND DUAL HEAT EXTRACTOR GILLS
+    // 4. HOOD WITH BULGE AND DUAL HEAT EXTRACTOR GILLS
     const hoodBulgeGeo = new THREE.BoxGeometry(0.85, 0.08, 1.3);
     const hoodBulge = new THREE.Mesh(hoodBulgeGeo, carPaintMaterial);
     hoodBulge.position.set(0, 0.76, 1.25);
     root.add(hoodBulge);
 
-    // Hood Gills (black vents)
     const gillGeo = new THREE.BoxGeometry(0.18, 0.03, 0.45);
     const leftGill = new THREE.Mesh(gillGeo, carbonMaterial);
     leftGill.position.set(-0.35, 0.77, 1.35);
@@ -155,7 +217,7 @@ export class CarModelBuilder {
     rightGill.rotation.y = -0.2;
     root.add(rightGill);
 
-    // 5. BLUE RACING STRIPES (Center twin stripes + side chevron decals)
+    // 5. RACING STRIPES (Center twin stripes + side decals)
     const hoodStripeGeo = new THREE.PlaneGeometry(0.18, 1.45);
     const leftHoodStripe = new THREE.Mesh(hoodStripeGeo, stripeMaterial);
     leftHoodStripe.position.set(-0.16, 0.775, 1.28);
@@ -190,6 +252,18 @@ export class CarModelBuilder {
     rightTrunkStripe.position.set(0.16, 0.755, -1.75);
     rightTrunkStripe.rotation.x = -Math.PI / 2;
     root.add(rightTrunkStripe);
+
+    // Side Chevron Graphics
+    const sideStripeGeo = new THREE.PlaneGeometry(2.3, 0.22);
+    const leftSideStripe = new THREE.Mesh(sideStripeGeo, stripeMaterial);
+    leftSideStripe.position.set(-0.97, 0.52, 0.1);
+    leftSideStripe.rotation.y = -Math.PI / 2;
+    root.add(leftSideStripe);
+
+    const rightSideStripe = new THREE.Mesh(sideStripeGeo, stripeMaterial);
+    rightSideStripe.position.set(0.97, 0.52, 0.1);
+    rightSideStripe.rotation.y = Math.PI / 2;
+    root.add(rightSideStripe);
 
     // Rear License Plate with "ROCKPORT - MW 2005"
     const plateCanvas = document.createElement('canvas');
@@ -231,31 +305,17 @@ export class CarModelBuilder {
       root.add(tip);
     });
 
-    // Side Chevron Graphics (Blue angle stripes)
-    const sideStripeGeo = new THREE.PlaneGeometry(2.3, 0.22);
-    const leftSideStripe = new THREE.Mesh(sideStripeGeo, stripeMaterial);
-    leftSideStripe.position.set(-0.97, 0.52, 0.1);
-    leftSideStripe.rotation.y = -Math.PI / 2;
-    root.add(leftSideStripe);
-
-    const rightSideStripe = new THREE.Mesh(sideStripeGeo, stripeMaterial);
-    rightSideStripe.position.set(0.97, 0.52, 0.1);
-    rightSideStripe.rotation.y = Math.PI / 2;
-    root.add(rightSideStripe);
-
     // 6. FRONT BUMPER, SPLITTER, CANARDS & BMW KIDNEY GRILLES
     const frontSplitterGeo = new THREE.BoxGeometry(2.0, 0.05, 0.35);
     const frontSplitter = new THREE.Mesh(frontSplitterGeo, carbonMaterial);
     frontSplitter.position.set(0, 0.22, 2.22);
     root.add(frontSplitter);
 
-    // Lower central radiator intake
     const intakeGeo = new THREE.BoxGeometry(1.2, 0.22, 0.1);
     const intakeMesh = new THREE.Mesh(intakeGeo, carbonMaterial);
     intakeMesh.position.set(0, 0.36, 2.18);
     root.add(intakeMesh);
 
-    // Kidney Grilles (Left and Right)
     const kidneyGeo = new THREE.BoxGeometry(0.32, 0.16, 0.05);
     const leftKidney = new THREE.Mesh(kidneyGeo, chromeMaterial);
     leftKidney.position.set(-0.22, 0.62, 2.17);
@@ -272,7 +332,6 @@ export class CarModelBuilder {
     wingBlade.rotation.x = 0.08;
     root.add(wingBlade);
 
-    // Wing Endplates
     const endplateGeo = new THREE.BoxGeometry(0.03, 0.22, 0.44);
     const leftEndplate = new THREE.Mesh(endplateGeo, carbonMaterial);
     leftEndplate.position.set(-0.93, 1.14, -2.12);
@@ -282,7 +341,6 @@ export class CarModelBuilder {
     rightEndplate.position.set(0.93, 1.14, -2.12);
     root.add(rightEndplate);
 
-    // Wing Support Struts
     const strutGeo = new THREE.BoxGeometry(0.04, 0.38, 0.08);
     const leftStrut = new THREE.Mesh(strutGeo, chromeMaterial);
     leftStrut.position.set(-0.45, 0.94, -2.08);
@@ -298,7 +356,7 @@ export class CarModelBuilder {
     diffuser.position.set(0, 0.24, -2.18);
     root.add(diffuser);
 
-    // 8. SIDE-EXIT DUAL EXHAUST TIPS (Ahead of rear wheels!)
+    // 8. SIDE-EXIT DUAL EXHAUST TIPS
     const exhaustTipGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.18, 12);
     exhaustTipGeo.rotateZ(Math.PI / 2);
 
@@ -318,7 +376,7 @@ export class CarModelBuilder {
     rightExhaust2.position.set(0.98, 0.25, -0.72);
     root.add(rightExhaust2);
 
-    // Nitrous Exhaust Flame Cones (Active when NOS is engaged)
+    // Nitrous Exhaust Flame Cones
     const flameGeo = new THREE.ConeGeometry(0.12, 0.65, 12);
     flameGeo.rotateZ(Math.PI / 2);
 
@@ -423,6 +481,13 @@ export class CarModelBuilder {
       exhaustLightL,
       exhaustLightR,
     };
+  }
+
+  /**
+   * Helper alias: default BMW M3 GTR build.
+   */
+  public static buildBMWM3GTR(): CarComponents {
+    return CarModelBuilder.buildCar('bmw-m3-gtr');
   }
 
   /**

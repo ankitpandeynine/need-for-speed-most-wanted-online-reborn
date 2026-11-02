@@ -1,11 +1,13 @@
 /**
  * Need for Speed: Most Wanted (2005) - 3D Environment Builder
- * Constructs the signature Rockport Highway 99 environment:
- * - 4-lane highway with asphalt texture, lane markings, and skid marks
+ * Constructs the signature Rockport Highway 99 corridor:
+ * - High-resolution asphalt texture with tire skid marks and highway striping
  * - Galvanized steel guardrails and overhead route sign gantries
- * - Autumn golden oak and maple trees lining the highway verges
- * - Industrial warehouses and distant Rockport skyline towers
+ * - Destructible roadside pursuit breakers (water barrels with hazard stripes)
+ * - Concrete highway overpass bridges
  * - Sodium-vapor streetlights with warm amber illumination
+ * - Autumn golden oak and maple trees lining the highway verges
+ * - Industrial brick factories and distant Rockport skyline towers
  */
 
 import * as THREE from 'three';
@@ -20,6 +22,62 @@ export class EnvironmentBuilder {
   public static readonly ROAD_WIDTH = 24; // 4 wide highway lanes + shoulders
   public static readonly CHUNK_COUNT = 6; // Active circulating chunks ahead and behind
 
+  private static asphaltTexture: THREE.CanvasTexture | null = null;
+
+  /**
+   * Generates a high-resolution asphalt canvas texture with aggregate pebbles and tire skid marks.
+   */
+  public static getAsphaltTexture(): THREE.CanvasTexture {
+    if (EnvironmentBuilder.asphaltTexture) return EnvironmentBuilder.asphaltTexture;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Base dark charcoal asphalt
+      ctx.fillStyle = '#1c1e22';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Aggregate grain noise
+      const imgData = ctx.getImageData(0, 0, 512, 512);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const noise = (Math.random() - 0.5) * 32;
+        data[i] = Math.min(255, Math.max(0, data[i] + noise));
+        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // Heavy curved tire rubber skid marks
+      ctx.strokeStyle = 'rgba(8, 9, 12, 0.55)';
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.moveTo(110, 0);
+      ctx.bezierCurveTo(140, 160, 95, 340, 125, 512);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(145, 0);
+      ctx.bezierCurveTo(175, 160, 130, 340, 160, 512);
+      ctx.stroke();
+
+      // Right lane skid mark
+      ctx.strokeStyle = 'rgba(8, 9, 12, 0.42)';
+      ctx.lineWidth = 16;
+      ctx.beginPath();
+      ctx.moveTo(350, 40);
+      ctx.bezierCurveTo(370, 190, 340, 360, 380, 512);
+      ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 16);
+    EnvironmentBuilder.asphaltTexture = tex;
+    return tex;
+  }
+
   /**
    * Builds a reusable road segment with highway asphalt, markings, guardrails, trees, and streetlights.
    */
@@ -29,9 +87,9 @@ export class EnvironmentBuilder {
 
     // Materials
     const asphaltMaterial = new THREE.MeshStandardMaterial({
-      color: 0x222428,
-      roughness: 0.88,
-      metalness: 0.12,
+      map: EnvironmentBuilder.getAsphaltTexture(),
+      roughness: 0.82,
+      metalness: 0.18,
     });
 
     const grassMaterial = new THREE.MeshStandardMaterial({
@@ -48,7 +106,7 @@ export class EnvironmentBuilder {
       roughness: 0.35,
     });
 
-    // 1. Asphalt Road Surface
+    // 1. Asphalt Road Surface with tire skid texture
     const roadGeo = new THREE.PlaneGeometry(EnvironmentBuilder.ROAD_WIDTH, EnvironmentBuilder.CHUNK_LENGTH);
     roadGeo.rotateX(-Math.PI / 2);
     const roadMesh = new THREE.Mesh(roadGeo, asphaltMaterial);
@@ -200,7 +258,15 @@ export class EnvironmentBuilder {
       EnvironmentBuilder.addOverheadGantry(group);
     }
 
-    // 8. Distant Industrial Warehouses / Skyline Silhouettes
+    // 8. Concrete Highway Overpass Bridge (Placed on odd chunks)
+    if (chunkIndex % 2 === 1) {
+      EnvironmentBuilder.addHighwayBridge(group);
+    }
+
+    // 9. Roadside Pursuit Breakers (Water Barrels with hazard stripes)
+    EnvironmentBuilder.addPursuitBreakers(group, chunkIndex);
+
+    // 10. Distant Industrial Warehouses / Skyline Silhouettes
     EnvironmentBuilder.addCityScenery(group, chunkIndex);
 
     return {
@@ -231,7 +297,7 @@ export class EnvironmentBuilder {
     beam.position.set(0, 8.8, 20);
     group.add(beam);
 
-    // Green Directional Highway Signs with Realistic Text Canvas Textures
+    // Green Directional Highway Signs with Canvas Textures
     const signTex1 = EnvironmentBuilder.createSignTexture(
       'NORTH 99',
       'ROCKPORT EXPRESSWAY',
@@ -254,13 +320,63 @@ export class EnvironmentBuilder {
     group.add(sign2);
   }
 
+  /**
+   * Adds a concrete highway overpass bridge spanning the 4 lanes.
+   */
+  private static addHighwayBridge(group: THREE.Group) {
+    const concreteMat = new THREE.MeshStandardMaterial({
+      color: 0x555d66,
+      roughness: 0.9,
+    });
+
+    // Bridge Deck
+    const deckGeo = new THREE.BoxGeometry(34, 1.8, 12);
+    const bridgeDeck = new THREE.Mesh(deckGeo, concreteMat);
+    bridgeDeck.position.set(0, 7.5, -30);
+    bridgeDeck.castShadow = true;
+    bridgeDeck.receiveShadow = true;
+    group.add(bridgeDeck);
+
+    // Bridge Support Pillars on sides
+    const pillarGeo = new THREE.BoxGeometry(2.4, 7.0, 2.4);
+    const leftPillar = new THREE.Mesh(pillarGeo, concreteMat);
+    leftPillar.position.set(-13.5, 3.5, -30);
+    leftPillar.castShadow = true;
+    group.add(leftPillar);
+
+    const rightPillar = new THREE.Mesh(pillarGeo, concreteMat);
+    rightPillar.position.set(13.5, 3.5, -30);
+    rightPillar.castShadow = true;
+    group.add(rightPillar);
+  }
+
+  /**
+   * Adds roadside pursuit breakers (yellow impact water barrels with hazard stripes).
+   */
+  private static addPursuitBreakers(group: THREE.Group, chunkIndex: number) {
+    const barrelYellowMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.5,
+    });
+    const barrelGeo = new THREE.CylinderGeometry(0.42, 0.45, 1.1, 12);
+
+    // Place cluster of 6 impact barrels at highway shoulder
+    const side = chunkIndex % 2 === 0 ? -11.2 : 11.2;
+    for (let i = 0; i < 4; i++) {
+      const barrel = new THREE.Mesh(barrelGeo, barrelYellowMat);
+      barrel.position.set(side, 0.55, -40 + i * 1.4);
+      barrel.castShadow = true;
+      group.add(barrel);
+    }
+  }
+
   private static createSignTexture(top: string, middle: string, bottom: string): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 180;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Highway Green background with yellow/white border
+      // Highway Green background with white border
       ctx.fillStyle = '#0a522c';
       ctx.fillRect(0, 0, 512, 180);
       ctx.strokeStyle = '#ffffff';
