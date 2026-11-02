@@ -1,13 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom, EATraxSong } from '../types';
-import { Square, Pause, Play, Monitor, Zap, Eye, Maximize2, Minimize2, Sparkles } from 'lucide-react';
-import { MultiplayerService } from '../services/multiplayer';
-import { EATraxService } from '../services/eaTrax';
-import { NFSMWScene, CameraViewMode } from '../engine/graphics/NFSMWScene';
-import { VehiclePhysics, VehicleInput } from '../engine/physics/VehiclePhysics';
-import { NFSMWSoundEngine } from '../engine/audio/NFSMWSoundEngine';
-import { NFSMWHUD } from './NFSMWHUD';
-import { VEHICLE_CATALOG } from '../engine/graphics/CarModelBuilder';
+import { GameSettings, ModItem } from '../types';
+import { Square, Zap, Eye, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -23,57 +16,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   mods,
   onStopGame,
   webGpuAdapterName,
-  initialVehicle,
-  initialEventTitle,
+  initialVehicle: _initialVehicle,
+  initialEventTitle: _initialEventTitle,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportContainerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Active View: 'game-3d' (Authentic 3D NFS MW Experience) or 'recomp-wasm' (Low-level recompiled binary debugger)
-  const [activeView, setActiveView] = useState<'game-3d' | 'recomp-wasm'>('game-3d');
-  const [cameraView, setCameraView] = useState<CameraViewMode>('chase-far');
-  const [selectedVehicle, setSelectedVehicle] = useState<string>(initialVehicle || 'bmw-m3-gtr');
-
-  // EA Trax State
-  const [currentTrack, setCurrentTrack] = useState<EATraxSong | null>(null);
-  const [showTraxBanner, setShowTraxBanner] = useState<boolean>(false);
-
-  const [fps, setFps] = useState(120);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showTelemetry, setShowTelemetry] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [showHelpBanner, setShowHelpBanner] = useState<boolean>(true);
+  const [showTelemetry, setShowTelemetry] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Live Vehicle Telemetry State for HUD
-  const [speedMph, setSpeedMph] = useState(0);
-  const [rpm, setRpm] = useState(900);
-  const [gear, setGear] = useState(1);
-  const [nosLevel, setNosLevel] = useState(100);
-  const [isNosActive, setIsNosActive] = useState(false);
-  const [speedbreakerLevel, setSpeedbreakerLevel] = useState(100);
-  const [isSpeedbreakerActive, setIsSpeedbreakerActive] = useState(false);
-  const [pursuitStatus, setPursuitStatus] = useState(new VehiclePhysics().pursuit);
-
-  // Multiplayer Room State
-  const [currentRoom, setCurrentRoom] = useState<LobbyRoom | null>(MultiplayerService.getCurrentRoom());
-  const [remoteRivals, setRemoteRivals] = useState<VehicleTelemetry[]>([]);
-
-  // Engine Instances
-  const sceneRef = useRef<NFSMWScene | null>(null);
-  const physicsRef = useRef<VehiclePhysics>(new VehiclePhysics());
-  const soundRef = useRef<NFSMWSoundEngine>(new NFSMWSoundEngine());
-
-  // Input State
-  const inputRef = useRef<VehicleInput>({
-    throttle: false,
-    brake: false,
-    steerLeft: false,
-    steerRight: false,
-    handbrake: false,
-    nitrous: false,
-    speedbreaker: false,
-  });
 
   // Track Fullscreen state
   useEffect(() => {
@@ -102,270 +53,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   }, []);
 
-  // Subscribe to multiplayer telemetry
+  // Keyboard shortcut: F for fullscreen, Escape to exit
   useEffect(() => {
-    const unsubRoom = MultiplayerService.subscribeRoom(setCurrentRoom);
-    const unsubTelemetry = MultiplayerService.subscribeTelemetry(setRemoteRivals);
-    return () => {
-      unsubRoom();
-      unsubTelemetry();
-    };
-  }, []);
-
-  // Subscribe to EA Trax track changes
-  useEffect(() => {
-    const trax = EATraxService.getInstance();
-    let bannerTimer: ReturnType<typeof setTimeout> | null = null;
-    const unsub = trax.subscribe((song) => {
-      setCurrentTrack(song);
-      setShowTraxBanner(true);
-      if (bannerTimer) clearTimeout(bannerTimer);
-      bannerTimer = setTimeout(() => setShowTraxBanner(false), 5500);
-    });
-    const cur = trax.getCurrentTrack();
-    if (cur) {
-      setCurrentTrack(cur);
-      setShowTraxBanner(true);
-      bannerTimer = setTimeout(() => setShowTraxBanner(false), 5500);
-    }
-    return () => {
-      unsub();
-      if (bannerTimer) clearTimeout(bannerTimer);
-    };
-  }, []);
-
-  // Camera Cycle
-  const cycleCamera = useCallback(() => {
-    setCameraView((prev) => {
-      const nextView: CameraViewMode =
-        prev === 'chase-far'
-          ? 'chase-close'
-          : prev === 'chase-close'
-          ? 'hood'
-          : prev === 'hood'
-          ? 'cockpit'
-          : 'chase-far';
-      sceneRef.current?.setCameraView(nextView);
-      return nextView;
-    });
-  }, []);
-
-  // Reset Vehicle
-  const resetVehicle = useCallback(() => {
-    physicsRef.current.resetVehicle();
-  }, []);
-
-  // Toggle Audio Mute
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      soundRef.current.setMuted(next);
-      return next;
-    });
-  }, []);
-
-  // 1. Initialize 3D Scene and Start Game Loop
-  useEffect(() => {
-    if (activeView !== 'game-3d') return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Initialize Three.js 3D Scene
-    const scene = new NFSMWScene(container);
-    sceneRef.current = scene;
-    scene.setCameraView(cameraView);
-    if (selectedVehicle && selectedVehicle !== 'bmw-m3-gtr') {
-      scene.changeVehicle(selectedVehicle);
-    }
-
-    // Initialize Web Audio Synth and EA Trax OST on first click/key
-    const initAudio = () => {
-      soundRef.current.init();
-      EATraxService.getInstance().play();
-      window.removeEventListener('keydown', initAudio);
-      window.removeEventListener('click', initAudio);
-    };
-    window.addEventListener('keydown', initAudio);
-    window.addEventListener('click', initAudio);
-
-    // Keyboard Input Listeners
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          inputRef.current.throttle = true;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          inputRef.current.brake = true;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          inputRef.current.steerLeft = true;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          inputRef.current.steerRight = true;
-          break;
-        case 'Space':
-          inputRef.current.handbrake = true;
-          e.preventDefault();
-          break;
-        case 'KeyX':
-        case 'ShiftLeft':
-        case 'ShiftRight':
-          if (!inputRef.current.nitrous) {
-            soundRef.current.playNosPurge();
-          }
-          inputRef.current.nitrous = true;
-          break;
-        case 'KeyG':
-          inputRef.current.speedbreaker = true;
-          break;
-        case 'KeyC':
-          cycleCamera();
-          break;
-        case 'KeyT':
-          EATraxService.getInstance().nextTrack();
-          break;
-        case 'KeyR':
-          resetVehicle();
-          break;
-        case 'KeyM':
-          toggleMute();
-          break;
-        case 'KeyF':
+      if (e.key === 'f' || e.key === 'F') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
           toggleFullscreen();
-          break;
+        }
       }
     };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      switch (e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          inputRef.current.throttle = false;
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          inputRef.current.brake = false;
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          inputRef.current.steerLeft = false;
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          inputRef.current.steerRight = false;
-          break;
-        case 'Space':
-          inputRef.current.handbrake = false;
-          break;
-        case 'KeyX':
-        case 'ShiftLeft':
-        case 'ShiftRight':
-          inputRef.current.nitrous = false;
-          break;
-        case 'KeyG':
-          inputRef.current.speedbreaker = false;
-          break;
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleFullscreen]);
 
-    // 2. Main 120 Hz Simulation Loop
-    let animId: number;
-    let lastTime = performance.now();
-    let frameCounter = 0;
-    let lastFpsUpdate = lastTime;
-    let telemetryBroadcastTimer = 0;
-
-    const gameLoop = (currentTime: number) => {
-      animId = requestAnimationFrame(gameLoop);
-
-      const dtMs = currentTime - lastTime;
-      lastTime = currentTime;
-      const dtSec = Math.min(0.05, Math.max(0.001, dtMs / 1000));
-
-      // Calculate FPS
-      frameCounter++;
-      if (currentTime - lastFpsUpdate >= 500) {
-        setFps(Math.round((frameCounter * 1000) / (currentTime - lastFpsUpdate)));
-        frameCounter = 0;
-        lastFpsUpdate = currentTime;
-      }
-
-      if (isPaused) return;
-
-      const physics = physicsRef.current;
-      const sound = soundRef.current;
-      const inputs = inputRef.current;
-
-      const prevGear = physics.currentGear;
-
-      // Step Physics Simulation
-      physics.update(inputs, dtSec);
-
-      // Play gear shift pop
-      if (physics.currentGear !== prevGear && physics.currentGear > 1) {
-        sound.playGearShift();
-      }
-
-      // Update Sound Engine
-      sound.update({
-        rpm: physics.rpm,
-        speedMph: Math.abs(physics.speedMph),
-        isNitrousActive: physics.isNosActive,
-        isDrifting: inputs.handbrake && Math.abs(physics.speedMph) > 25,
-        isPoliceNear: physics.pursuit.policeDistance < 80,
-        policeDistance: physics.pursuit.policeDistance,
-        isSpeedbreaker: physics.isSpeedbreakerActive,
-      });
-
-      // Update 3D Scene (Three.js rendering)
-      scene.update(physics, inputs.brake);
-
-      // Sync React state for HUD
-      setSpeedMph(physics.speedMph);
-      setRpm(physics.rpm);
-      setGear(physics.currentGear);
-      setNosLevel(physics.nosLevel);
-      setIsNosActive(physics.isNosActive);
-      setSpeedbreakerLevel(physics.speedbreakerLevel);
-      setIsSpeedbreakerActive(physics.isSpeedbreakerActive);
-      setPursuitStatus({ ...physics.pursuit });
-
-      // Broadcast Multiplayer Telemetry at 30 Hz
-      telemetryBroadcastTimer += dtSec;
-      if (telemetryBroadcastTimer >= 0.033) {
-        telemetryBroadcastTimer = 0;
-        MultiplayerService.sendTelemetry({
-          position: { x: physics.posX, y: 0, z: physics.posZ },
-          speedMph: physics.speedMph,
-          gear: physics.currentGear,
-          rpm: physics.rpm,
-          nitroActive: physics.isNosActive,
-          carModel: 'BMW M3 GTR (E46)',
-        });
+  // Automatically focus the real game iframe on load and on click
+  useEffect(() => {
+    const focusIframe = () => {
+      if (iframeRef.current) {
+        iframeRef.current.focus();
+        iframeRef.current.contentWindow?.focus();
       }
     };
+    focusIframe();
+    const timer1 = setTimeout(focusIframe, 300);
+    const timer2 = setTimeout(focusIframe, 1000);
+    const timer3 = setTimeout(focusIframe, 3000);
 
-    animId = requestAnimationFrame(gameLoop);
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        if (
+          ['Enter', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ControlLeft', 'Escape'].includes(
+            e.code
+          )
+        ) {
+          iframeRef.current.focus();
+          iframeRef.current.contentWindow.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
 
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('keydown', initAudio);
-      window.removeEventListener('click', initAudio);
-      scene.destroy();
-      soundRef.current.destroy();
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      window.removeEventListener('keydown', handleWindowKeyDown);
     };
-  }, [activeView, isPaused, cycleCamera, resetVehicle, toggleMute, toggleFullscreen]);
+  }, []);
+
+  const openDedicatedTab = () => {
+    window.open('/nfsmw/runtime.html?game=nfsmw&res=1280x720', '_blank');
+  };
 
   return (
     <div className="nfsmw-game-container">
@@ -374,72 +113,27 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 800, color: '#10b981' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            NFSMW 2005 3D ENGINE
-          </span>
-          <span style={{ color: '#475569' }}>|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            Car:
-            <select
-              value={selectedVehicle}
-              onChange={(e) => {
-                const vid = e.target.value;
-                setSelectedVehicle(vid);
-                sceneRef.current?.changeVehicle(vid);
-              }}
-              style={{
-                background: '#0e1118',
-                color: '#f59e0b',
-                border: '1px solid #333d4d',
-                borderRadius: '6px',
-                padding: '2px 8px',
-                fontWeight: 800,
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
-            >
-              {VEHICLE_CATALOG.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
+            REAL NFS MOST WANTED (2005) PC WEBGPU
           </span>
           <span style={{ color: '#475569' }}>|</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            FPS: <span style={{ color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>{fps}</span> / 120
+            Resolution: <span style={{ color: '#f59e0b', fontWeight: 800 }}>1280×720</span>
           </span>
           <span style={{ color: '#475569' }}>|</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            Sim: <span style={{ color: '#10b981', fontWeight: 800 }}>120 Hz Fixed</span>
+            Simulation: <span style={{ color: '#10b981', fontWeight: 800 }}>120 Hz Fixed</span>
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* View Mode Toggle: 3D Game vs Recomp WASM Debug */}
           <button
-            onClick={() => setActiveView('game-3d')}
+            onClick={openDedicatedTab}
             className="nfsmw-hud-btn"
-            style={{
-              background: activeView === 'game-3d' ? '#f59e0b' : 'rgba(24, 28, 38, 0.85)',
-              color: activeView === 'game-3d' ? '#000' : '#cbd5e1',
-              borderColor: activeView === 'game-3d' ? '#f59e0b' : '#333d4d',
-            }}
+            title="Open real Need for Speed: Most Wanted in a full dedicated browser window"
+            style={{ color: '#60a5fa', borderColor: '#2563eb' }}
           >
-            <Sparkles size={14} />
-            3D NEED FOR SPEED
-          </button>
-
-          <button
-            onClick={() => setActiveView('recomp-wasm')}
-            className="nfsmw-hud-btn"
-            style={{
-              background: activeView === 'recomp-wasm' ? '#f59e0b' : 'rgba(24, 28, 38, 0.85)',
-              color: activeView === 'recomp-wasm' ? '#000' : '#cbd5e1',
-              borderColor: activeView === 'recomp-wasm' ? '#f59e0b' : '#333d4d',
-            }}
-          >
-            <Monitor size={14} />
-            RECOMP WASM DEBUG
+            <ExternalLink size={14} color="#60a5fa" />
+            Dedicated Tab
           </button>
 
           <button onClick={() => setShowTelemetry(!showTelemetry)} className="nfsmw-hud-btn">
@@ -447,14 +141,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
           </button>
 
-          <button onClick={() => setIsPaused(!isPaused)} className="nfsmw-hud-btn">
-            {isPaused ? <Play size={14} color="#10b981" /> : <Pause size={14} />}
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
-
           <button onClick={toggleFullscreen} className="nfsmw-hud-btn" title="Toggle Fullscreen (F)">
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            Fullscreen
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen (F)'}
           </button>
 
           <button
@@ -469,182 +158,97 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       </div>
 
       {/* Main Viewport Container */}
-      <div ref={viewportContainerRef} className="nfsmw-viewport">
-        {activeView === 'game-3d' ? (
-          <>
-            {/* 3D Three.js WebGL / WebGPU Viewport */}
-            <div
-              ref={containerRef}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                display: 'block',
+      <div
+        ref={viewportContainerRef}
+        className="nfsmw-viewport"
+        onClick={() => {
+          iframeRef.current?.focus();
+          iframeRef.current?.contentWindow?.focus();
+        }}
+      >
+        {/* Real Recompiled WASM + WebGPU Iframe View */}
+        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
+          <iframe
+            ref={iframeRef}
+            src="/nfsmw/runtime.html?game=nfsmw&res=1280x720"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="cross-origin-isolated; autoplay; fullscreen"
+          />
+        </div>
+
+        {/* Quick Help Banner Overlay */}
+        {showHelpBanner && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 35,
+              background: 'rgba(10, 14, 22, 0.94)',
+              border: '1px solid rgba(245, 158, 11, 0.8)',
+              borderRadius: '8px',
+              padding: '8px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.8), 0 0 15px rgba(245, 158, 11, 0.2)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b' }}>
+              🎮 Click game screen & Press{' '}
+              <kbd style={{ background: '#222', padding: '2px 6px', borderRadius: '4px', border: '1px solid #555', color: '#fff' }}>ENTER</kbd> or{' '}
+              <kbd style={{ background: '#222', padding: '2px 6px', borderRadius: '4px', border: '1px solid #555', color: '#fff' }}>SPACE</kbd> to skip intros & enter Title Screen!
+            </span>
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>• Arrows / WASD to Drive • Shift for NOS • [F] for Fullscreen</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowHelpBanner(false);
               }}
-            />
-
-            {/* High-Speed Radial Motion Blur & Speed Lines */}
-            {speedMph > 120 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  background: `radial-gradient(ellipse at center, transparent 40%, rgba(245, 158, 11, ${Math.min(0.28, (speedMph - 120) / 380)}) 85%, rgba(255, 255, 255, ${Math.min(0.22, (speedMph - 120) / 450)}) 100%)`,
-                  mixBlendMode: 'screen',
-                  zIndex: 22,
-                }}
-              />
-            )}
-
-            {/* Nitrous Blue Warp Glow */}
-            {isNosActive && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  background: 'radial-gradient(ellipse at center, transparent 35%, rgba(6, 182, 212, 0.22) 85%, rgba(14, 165, 233, 0.35) 100%)',
-                  mixBlendMode: 'screen',
-                  zIndex: 23,
-                }}
-              />
-            )}
-
-            {/* Authentic Need for Speed Most Wanted 2005 HUD */}
-            <NFSMWHUD
-              speedMph={speedMph}
-              rpm={rpm}
-              gear={gear}
-              nosLevel={nosLevel}
-              isNosActive={isNosActive}
-              speedbreakerLevel={speedbreakerLevel}
-              isSpeedbreakerActive={isSpeedbreakerActive}
-              pursuit={pursuitStatus}
-              cameraView={cameraView}
-              onCycleCamera={cycleCamera}
-              onResetVehicle={resetVehicle}
-              isMuted={isMuted}
-              onToggleMute={toggleMute}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={toggleFullscreen}
-            />
-
-            {/* Mission / Race Event Header Pill */}
-            {initialEventTitle && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '18px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'rgba(12, 16, 24, 0.92)',
-                  border: '1px solid #f59e0b',
-                  borderRadius: '20px',
-                  padding: '6px 20px',
-                  color: '#f59e0b',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  zIndex: 35,
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.7)',
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                <span>🏁 {initialEventTitle}</span>
-              </div>
-            )}
-
-            {/* Authentic EA TRAX Slide-In Banner */}
-            {showTraxBanner && currentTrack && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '18px',
-                  right: '20px',
-                  zIndex: 45,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  background: 'linear-gradient(135deg, rgba(14, 18, 26, 0.96) 0%, rgba(22, 28, 42, 0.98) 100%)',
-                  border: '1px solid rgba(245, 158, 11, 0.5)',
-                  borderLeft: '5px solid #f59e0b',
-                  borderRadius: '8px',
-                  padding: '12px 20px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(245, 158, 11, 0.25)',
-                  pointerEvents: 'none',
-                  maxWidth: '380px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '6px',
-                    background: '#f59e0b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '10px',
-                    color: '#000',
-                    lineHeight: 1.1,
-                    textAlign: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  EA
-                  <br />
-                  TRAX
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    EA TRAX™ • [T] NEXT TRACK
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentTrack.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentTrack.artist} • <span style={{ color: '#94a3b8' }}>{currentTrack.album}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          /* Recompiled WASM Iframe View */
-          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <iframe
-              ref={iframeRef}
-              src="/runtime.html?game=nfsmw"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              allow="cross-origin-isolated; autoplay; fullscreen"
-            />
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#64748b',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 800,
+                padding: '0 4px',
+              }}
+              title="Dismiss"
+            >
+              ✕
+            </button>
           </div>
         )}
 
         {/* Telemetry Overlay Panel */}
         {showTelemetry && (
           <div className="nfsmw-telemetry-box">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontWeight: 800, marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #232b3c' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#f59e0b',
+                fontWeight: 800,
+                marginBottom: '8px',
+                paddingBottom: '6px',
+                borderBottom: '1px solid #232b3c',
+              }}
+            >
               <Zap size={14} />
-              <span>VEHICLE & GRAPHICS TELEMETRY</span>
+              <span>AUTHENTIC NFSMW (2005) TELEMETRY</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Vehicle:</span>
-                <span style={{ color: '#fff', fontWeight: 700 }}>BMW M3 GTR (E46)</span>
+                <span>Executable:</span>
+                <span style={{ color: '#fff', fontWeight: 700 }}>speed.exe (AOT Recompiled)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Graphics Engine:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>WebGL / WebGPU PBR</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Direct3D 9 on WebGPU Metal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Adapter:</span>
@@ -653,22 +257,24 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Visual Treatment:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>Autumn Golden-Hour</span>
+                <span>Resolution:</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>1280×720 (Widescreen)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Pursuit Status:</span>
-                <span style={{ color: '#ef4444', fontWeight: 700 }}>Heat 5 (Cross Interceptors)</span>
+                <span>Physics:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>120 Hz Fixed Step</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Multiplayer:</span>
-                <span style={{ color: '#60a5fa' }}>
-                  {currentRoom ? `${currentRoom.name} (${remoteRivals.length + 1} Racers)` : 'Offline Solo Drive'}
-                </span>
+                <span>Audio Engine:</span>
+                <span style={{ color: '#60a5fa' }}>AudioWorklet PCM (48 kHz Stereo)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Active Mods:</span>
                 <span style={{ color: '#f59e0b', fontWeight: 700 }}>{mods.filter((m) => m.enabled).length} Injected</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Controls:</span>
+                <span style={{ color: '#cbd5e1' }}>Keyboard / Gamepad (Native)</span>
               </div>
             </div>
           </div>

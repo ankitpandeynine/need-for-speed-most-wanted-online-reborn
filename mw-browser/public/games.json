@@ -29,49 +29,22 @@
       "Most Wanted"
     ],
     "minFreeMb": 300,
-    "hostedAssets": "./nfsmw/assets.json",
-    "assetBase": "/_game-assets/nfsmw",
     "streamAssets": true,
-    "inputHints": {
-      "bindings": {
-        "left_stick": "horizontal_arrows",
-        "right_stick": "none",
-        "dpad": "arrows",
-        "cursor_speed": 900,
-        "cross": "key:Space+Return",
-        "circle": "key:X",
-        "square": "key:G",
-        "triangle": "key:C",
-        "l1": "key:L",
-        "r1": "key:LShift",
-        "l2": "key:Down",
-        "r2": "key:Up",
-        "start": "key:Escape",
-        "select": "key:R",
-        "l3": "key:LCtrl",
-        "r3": "key:L",
-        "ps": "action:settings"
-      },
-      "actions": {
-        "confirm": "key:Return",
-        "back": "key:Escape",
-        "accelerate": "key:Up",
-        "brake": "key:Down",
-        "steer": "horizontal_arrows",
-        "e-brake": "key:Space",
-        "nitrous": "key:X",
-        "speedbreaker": "key:G",
-        "camera": "key:C",
-        "look back": "key:L",
-        "shift up": "key:LShift",
-        "reset car": "key:R"
-      },
-      "aliases": {
-        "W": "Up",
-        "S": "Down",
-        "A": "Left",
-        "D": "Right"
-      }
-    }
+    "controls": {
+      "pad": "native"
+    },
+    "webDefaults": {
+      "RECOMP_WEB_DEFAULTS": "1",
+      "RECOMP_NFSMW_GRAPHICS": "1"
+    },
+    "webSavedOverrides": {
+      "RECOMP_NFSMW_GRAPHICS": "0"
+    },
+    "webRegistryPreferences": [
+      "g_PerformanceLevel",
+      "g_RacingResolution"
+    ],
+    "hostedAssets": "./nfsmw/assets.json",
+    "assetBase": "https://cdn.justplayweb.com/nfsmw-pc13-20261010"
   }
 ]
