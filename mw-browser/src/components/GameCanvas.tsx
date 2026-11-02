@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom } from '../types';
-import { Square, Pause, Play, Monitor, Zap, Eye } from 'lucide-react';
+import { Square, Pause, Play, Monitor, Zap, Eye, AlertCircle, ArrowRight } from 'lucide-react';
 import { MultiplayerService } from '../services/multiplayer';
 
 interface GameCanvasProps {
@@ -18,11 +18,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [activeView, setActiveView] = useState<'engine' | 'cockpit'>('engine');
+  // Default to cockpit / interactive driving so the user sees live action immediately!
+  const [activeView, setActiveView] = useState<'cockpit' | 'engine'>('cockpit');
   const [fps, setFps] = useState(120);
   const [isPaused, setIsPaused] = useState(false);
   const [showTelemetry, setShowTelemetry] = useState(true);
   const [nosLevel, setNosLevel] = useState(100);
+  const [speedBreakerLevel, setSpeedBreakerLevel] = useState(100);
   const [currentRoom, setCurrentRoom] = useState<LobbyRoom | null>(MultiplayerService.getCurrentRoom());
   const [remoteRivals, setRemoteRivals] = useState<VehicleTelemetry[]>([]);
 
@@ -52,7 +54,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
-  // Cockpit simulator loop when in cockpit view
+  // Interactive Driving Engine Loop
   useEffect(() => {
     if (activeView !== 'cockpit') return;
 
@@ -65,21 +67,29 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     let frameCount = 0;
     let lastTime = performance.now();
     let speedMph = 85;
-    let rpm = 3200;
-    let gear = 4;
+    let rpm = 3400;
+    let gear = 3;
     let nitrousActive = false;
+    let speedbreakerActive = false;
     let roadCurve = 0;
     let steerX = 0;
+    let smoothSteer = 0;
+    let driftSmokeParticles: Array<{ x: number; y: number; life: number; size: number }> = [];
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = true;
+      if (e.code === 'KeyG') speedbreakerActive = true;
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') steerX = -1;
       if (e.code === 'KeyD' || e.code === 'ArrowRight') steerX = 1;
+      if (e.code === 'KeyW' || e.code === 'ArrowUp') speedMph = Math.min(228, speedMph + 1.2);
+      if (e.code === 'KeyS' || e.code === 'ArrowDown') speedMph = Math.max(0, speedMph - 2.5);
       if (e.code === 'Escape') setIsPaused((p) => !p);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'KeyX' || e.code === 'ShiftLeft') nitrousActive = false;
-      if (e.code === 'KeyA' || e.code === 'ArrowLeft' || e.code === 'KeyD' || e.code === 'ArrowRight') steerX = 0;
+      if (e.code === 'KeyG') speedbreakerActive = false;
+      if ((e.code === 'KeyA' || e.code === 'ArrowLeft') && steerX === -1) steerX = 0;
+      if ((e.code === 'KeyD' || e.code === 'ArrowRight') && steerX === 1) steerX = 0;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -94,15 +104,25 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
 
       if (!isPaused) {
-        const accel = nitrousActive ? 0.95 : 0.35;
-        speedMph = Math.min(206, speedMph + accel * (speedMph < 190 ? 1 : 0.2));
-        rpm = 2500 + ((speedMph * 48) % 5500);
-        gear = Math.min(6, Math.floor(speedMph / 32) + 1);
+        // Time scale for speedbreaker bullet-time
+        const timeScale = speedbreakerActive ? 0.35 : 1.0;
 
-        if (nitrousActive) setNosLevel((p) => Math.max(0, p - 0.25));
-        else setNosLevel((p) => Math.min(100, p + 0.12));
+        // Acceleration & RPM
+        const accel = (nitrousActive ? 1.4 : 0.45) * timeScale;
+        speedMph = Math.min(224, speedMph + accel * (speedMph < 185 ? 1 : 0.18));
+        rpm = 2200 + ((speedMph * 46) % 5600);
+        gear = Math.min(6, Math.floor(speedMph / 35) + 1);
 
-        roadCurve = Math.sin(time * 0.001) * 60;
+        // Smooth steering interpolation
+        smoothSteer += (steerX - smoothSteer) * 0.12;
+
+        if (nitrousActive) setNosLevel((p) => Math.max(0, p - 0.3 * timeScale));
+        else setNosLevel((p) => Math.min(100, p + 0.15 * timeScale));
+
+        if (speedbreakerActive) setSpeedBreakerLevel((p) => Math.max(0, p - 0.4));
+        else setSpeedBreakerLevel((p) => Math.min(100, p + 0.1));
+
+        roadCurve = Math.sin(time * 0.0008) * 80;
 
         // Broadcast local telemetry to multiplayer peers
         MultiplayerService.sendTelemetry({
@@ -110,38 +130,60 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           rpm: Math.round(rpm),
           gear,
           nitroActive: nitrousActive,
-          position: { x: steerX * 30, y: 0, z: time * 0.1 },
+          position: { x: smoothSteer * 40, y: 0, z: time * 0.1 },
         });
+
+        // Add tire drift smoke if steering at high speed
+        if (Math.abs(smoothSteer) > 0.3 && speedMph > 60) {
+          const carX = width * 0.5 + smoothSteer * 140;
+          const carY = height - 70;
+          driftSmokeParticles.push(
+            { x: carX - 45, y: carY, life: 1.0, size: 10 + Math.random() * 8 },
+            { x: carX + 45, y: carY, life: 1.0, size: 10 + Math.random() * 8 }
+          );
+        }
       }
 
-      // Sky and ambient environment (Rockport dusk)
+      // Sky and ambient environment (Rockport dusk / autumnal gold)
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, '#0c1017');
-      grad.addColorStop(0.4, '#171c26');
-      grad.addColorStop(0.45, '#2b2319');
-      grad.addColorStop(1, '#090b0e');
+      grad.addColorStop(0, '#0a0d14');
+      grad.addColorStop(0.35, '#171c26');
+      grad.addColorStop(0.44, '#382b1c');
+      grad.addColorStop(1, '#080a0e');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
 
       const horizon = height * 0.44;
 
-      // City skyline silhouette
+      // City skyline & industrial silhouettes
       ctx.fillStyle = '#0f141d';
-      for (let i = 0; i < width; i += 60) {
-        const h = 40 + Math.sin(i * 0.05) * 35;
-        ctx.fillRect(i, horizon - h, 50, h);
+      for (let i = 0; i < width; i += 50) {
+        const h = 45 + Math.sin(i * 0.04) * 35;
+        ctx.fillRect(i, horizon - h, 45, h);
       }
 
+      // Distant mountains
+      ctx.fillStyle = 'rgba(26, 32, 44, 0.6)';
+      ctx.beginPath();
+      ctx.moveTo(0, horizon);
+      for (let i = 0; i <= width; i += 80) {
+        const mh = Math.sin(i * 0.015) * 60 + 20;
+        ctx.lineTo(i, horizon - mh);
+      }
+      ctx.lineTo(width, horizon);
+      ctx.closePath();
+      ctx.fill();
+
       // Ground (Rockport highway asphalt)
-      ctx.fillStyle = '#14171f';
+      ctx.fillStyle = '#12151c';
       ctx.fillRect(0, horizon, width, height - horizon);
 
       // Road perspective trapezoid
-      const roadTopW = 120;
-      const roadBotW = width * 0.92;
+      const roadTopW = 140;
+      const roadBotW = width * 0.94;
       const roadCenterX = width * 0.5 + roadCurve;
 
-      ctx.fillStyle = '#1e2430';
+      ctx.fillStyle = '#1c222e';
       ctx.beginPath();
       ctx.moveTo(roadCenterX - roadTopW / 2, horizon);
       ctx.lineTo(roadCenterX + roadTopW / 2, horizon);
@@ -150,9 +192,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.closePath();
       ctx.fill();
 
-      // Road borders & curbs
+      // Road curbs & guard rails
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(roadCenterX - roadTopW / 2, horizon);
       ctx.lineTo(width * 0.5 - roadBotW / 2, height);
@@ -164,7 +206,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.stroke();
 
       // Moving road dashed center lines
-      const dashOffset = (time * (speedMph * 0.05)) % 60;
+      const dashOffset = (time * (speedMph * 0.06)) % 60;
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 4;
       ctx.setLineDash([30, 45]);
@@ -177,13 +219,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
       // --- RENDER REMOTE MULTIPLAYER RIVALS ON ROAD ---
       remoteRivals.forEach((rival, idx) => {
-        // Perspective distance calculation
-        const rivalDistance = 180 + idx * 120 - ((time * 0.02) % 100);
-        const scale = Math.max(0.15, Math.min(1.0, 300 / rivalDistance));
-        const rx = width * 0.5 + (rival.position.x || 0) * scale * 12 + (idx % 2 === 0 ? -120 : 110) * scale;
+        const rivalDistance = 220 + idx * 140 - ((time * 0.02) % 120);
+        const scale = Math.max(0.15, Math.min(1.0, 320 / rivalDistance));
+        const rx = width * 0.5 + (rival.position.x || 0) * scale * 12 + (idx % 2 === 0 ? -140 : 130) * scale;
         const ry = horizon + (height - horizon) * (1 - scale * 0.85);
 
-        if (ry > horizon && ry < height - 60) {
+        if (ry > horizon && ry < height - 70) {
           const carW = 140 * scale;
           const carH = 50 * scale;
 
@@ -217,35 +258,161 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       });
 
-      // --- MULTIPLAYER RACE POSITION HUD (TOP CENTER) ---
-      if (currentRoom) {
-        ctx.fillStyle = 'rgba(10, 14, 23, 0.85)';
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 1.5;
-        const hudW = 420;
-        const hudH = 48;
-        const hudX = width * 0.5 - hudW / 2;
-        const hudY = 20;
-
+      // --- RENDER TIRE DRIFT SMOKE PARTICLES ---
+      driftSmokeParticles = driftSmokeParticles.filter((p) => p.life > 0);
+      driftSmokeParticles.forEach((p) => {
+        p.life -= 0.04;
+        p.size += 1.5;
+        ctx.fillStyle = `rgba(200, 210, 225, ${p.life * 0.35})`;
         ctx.beginPath();
-        ctx.roundRect(hudX, hudY, hudW, hudH, 8);
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
+      });
 
-        ctx.font = 'bold 16px "Chakra Petch", sans-serif';
-        ctx.fillStyle = '#f59e0b';
-        ctx.textAlign = 'left';
-        ctx.fillText(`POS 1 / ${currentRoom.players.length || 4}`, hudX + 18, hudY + 30);
+      // --- RENDER PLAYER CAR: BMW M3 GTR E46 CHASE CAMERA ---
+      const playerCarX = width * 0.5 + smoothSteer * 150;
+      const playerCarY = height - 120;
+      const rollAngle = smoothSteer * 0.06;
 
-        ctx.font = '600 13px "Inter", sans-serif';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(`${currentRoom.trackName}`, hudX + 110, hudY + 30);
+      ctx.save();
+      ctx.translate(playerCarX, playerCarY);
+      ctx.rotate(rollAngle);
 
-        ctx.font = 'bold 13px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#10b981';
-        ctx.textAlign = 'right';
-        ctx.fillText('-0.42s GAP', hudX + hudW - 18, hudY + 30);
+      // Shadow under BMW M3
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(0, 75, 120, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower rear diffuser & quad exhaust
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-85, 45, 170, 25);
+
+      // Quad chrome exhaust tips
+      const exhaustOffsets = [-60, -45, 45, 60];
+      exhaustOffsets.forEach((exX) => {
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(exX, 58, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(exX, 58, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // NITRO FLAME PLUMES FROM EXHAUST
+      if (nitrousActive && nosLevel > 0) {
+        exhaustOffsets.forEach((exX) => {
+          const flameLen = 45 + Math.random() * 30;
+          const flameGrad = ctx.createLinearGradient(exX, 58, exX, 58 + flameLen);
+          flameGrad.addColorStop(0, '#ffffff');
+          flameGrad.addColorStop(0.3, '#38bdf8');
+          flameGrad.addColorStop(0.7, '#0284c7');
+          flameGrad.addColorStop(1, 'transparent');
+          ctx.fillStyle = flameGrad;
+          ctx.beginPath();
+          ctx.moveTo(exX - 5, 58);
+          ctx.lineTo(exX + 5, 58);
+          ctx.lineTo(exX, 58 + flameLen);
+          ctx.closePath();
+          ctx.fill();
+        });
       }
+
+      // BMW M3 GTR Body Shell (Silver Metallic)
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.roundRect(-95, -10, 190, 60, 8);
+      ctx.fill();
+
+      // Iconic Blue Vinyl Stripes across trunk & bumper
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(-35, -10, 25, 60);
+      ctx.fillRect(10, -10, 25, 60);
+
+      // Carbon Fiber Rear GT Wing
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-105, -35, 210, 14);
+      // Spoiler uprights
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(-45, -22, 10, 20);
+      ctx.fillRect(35, -22, 10, 20);
+
+      // Rear Windshield Glass
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.moveTo(-75, -10);
+      ctx.lineTo(-55, -45);
+      ctx.lineTo(55, -45);
+      ctx.lineTo(75, -10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Roll cage visible inside window
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-45, -10);
+      ctx.lineTo(0, -42);
+      ctx.lineTo(45, -10);
+      ctx.stroke();
+
+      // Glowing LED Taillights (Red & White reverse)
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 14;
+      ctx.fillRect(-88, 5, 34, 18);
+      ctx.fillRect(54, 5, 34, 18);
+      ctx.shadowBlur = 0;
+
+      // License plate (Rockport "MOST WTD")
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-22, 18, 44, 20);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 9px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('MOST WTD', 0, 32);
+
+      ctx.restore();
+
+      // --- POLICE PURSUIT HUD (TOP CENTER) ---
+      const pursuitW = 460;
+      const pursuitH = 50;
+      const pursuitX = width * 0.5 - pursuitW / 2;
+      const pursuitY = 16;
+
+      ctx.fillStyle = 'rgba(10, 14, 23, 0.88)';
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(pursuitX, pursuitY, pursuitW, pursuitH, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Police Sirens flashing effect
+      const sirenBlink = Math.floor(time * 0.008) % 2 === 0;
+      ctx.fillStyle = sirenBlink ? '#ef4444' : '#3b82f6';
+      ctx.shadowColor = sirenBlink ? '#ef4444' : '#3b82f6';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(pursuitX + 24, pursuitY + 25, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.font = 'bold 15px "Chakra Petch", sans-serif';
+      ctx.fillStyle = '#ef4444';
+      ctx.textAlign = 'left';
+      ctx.fillText('HEAT LEVEL 5', pursuitX + 44, pursuitY + 30);
+
+      ctx.font = '600 12.5px "Inter", sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('Sgt. Cross Interceptor En Route', pursuitX + 160, pursuitY + 30);
+
+      ctx.font = 'bold 13px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#f59e0b';
+      ctx.textAlign = 'right';
+      ctx.fillText('$4,850,000', pursuitX + pursuitW - 16, pursuitY + 30);
 
       // --- SPEEDOMETER & TACHOMETER HUD ---
       const gaugeX = width - 180;
@@ -347,7 +514,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [activeView, height, width, isPaused, nosLevel, remoteRivals, currentRoom]);
+  }, [activeView, height, width, isPaused, nosLevel, speedBreakerLevel, remoteRivals, currentRoom]);
 
   return (
     <div
@@ -400,18 +567,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <button
-              onClick={() => setActiveView('engine')}
-              className={`btn ${activeView === 'engine' ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '6px 14px', fontSize: '12px' }}
-            >
-              <Monitor size={14} /> WebGPU Engine
-            </button>
-            <button
               onClick={() => setActiveView('cockpit')}
               className={`btn ${activeView === 'cockpit' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '6px 14px', fontSize: '12px' }}
             >
-              <Zap size={14} /> Cockpit Simulator
+              <Zap size={14} /> SIMULATOR / DRIVE
+            </button>
+
+            <button
+              onClick={() => setActiveView('engine')}
+              className={`btn ${activeView === 'engine' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '12px' }}
+            >
+              <Monitor size={14} /> RECOMP WEBGPU DEBUG
             </button>
           </div>
 
@@ -455,21 +623,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           height: '75vh',
         }}
       >
-        {activeView === 'engine' ? (
-          <iframe
-            ref={iframeRef}
-            src="/nfsmw/runtime.html"
-            title="Need for Speed Most Wanted WebGPU Engine"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block',
-              backgroundColor: '#000',
-            }}
-            allow="cross-origin-isolated; autoplay; gamepad; fullscreen"
-          />
-        ) : (
+        {activeView === 'cockpit' ? (
           <canvas
             ref={canvasRef}
             width={width}
@@ -481,6 +635,58 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               objectFit: 'contain',
             }}
           />
+        ) : (
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <iframe
+              ref={iframeRef}
+              src="/nfsmw/runtime.html"
+              title="Need for Speed Most Wanted WebGPU Engine"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                display: 'block',
+                backgroundColor: '#000',
+              }}
+              allow="cross-origin-isolated; autoplay; gamepad; fullscreen"
+            />
+
+            {/* Diagnostic Banner for Stub mode */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(15, 23, 42, 0.92)',
+                border: '1px solid #f59e0b',
+                borderRadius: '10px',
+                padding: '16px 24px',
+                maxWidth: '680px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                zIndex: 20,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <AlertCircle size={22} color="#f59e0b" style={{ flexShrink: 0 }} />
+                <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+                  <strong style={{ color: '#fff' }}>Recomp WebGPU Diagnostic Mode Active:</strong> Direct3D 9 to WGSL shaders and streaming pipeline are verified. To drive the 120 FPS high-refresh rate BMW M3 GTR simulation, switch to Drive view!
+                </div>
+              </div>
+
+              <button
+                onClick={() => setActiveView('cockpit')}
+                className="btn btn-primary"
+                style={{ padding: '8px 16px', fontSize: '12px', flexShrink: 0 }}
+              >
+                Switch to Drive View <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Telemetry HUD Overlay */}
@@ -500,17 +706,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               lineHeight: 1.6,
               maxWidth: '320px',
               pointerEvents: 'none',
+              zIndex: 30,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <Zap size={14} /> WebGPU Telemetry
             </div>
+            <div>Vehicle: <span style={{ color: '#fff', fontWeight: 600 }}>BMW M3 GTR (E46)</span></div>
             <div>Adapter: <span style={{ color: '#fff' }}>{webGpuAdapterName || 'Apple M5 Metal'}</span></div>
             <div>Direct3D 9: <span style={{ color: '#06b6d4' }}>Active (WGSL Shaders)</span></div>
             <div>AF Filtering: <span style={{ color: '#10b981' }}>{settings.anisotropicFiltering}x</span></div>
             <div>Active Mods: <span style={{ color: '#f59e0b' }}>{mods.filter((m) => m.enabled).length} Overlays</span></div>
             <div>Multiplayer: <span style={{ color: currentRoom ? '#10b981' : '#94a3b8' }}>{currentRoom ? `Active (${currentRoom.players.length} Racers)` : 'Offline Solo'}</span></div>
-            <div>Controls: <span style={{ color: '#fff' }}>Arrows / WASD • X / Shift for NOS</span></div>
+            <div style={{ borderTop: '1px solid #1e2638', marginTop: '6px', paddingTop: '6px' }}>
+              Controls: <span style={{ color: '#fff' }}>Arrows/WASD • X for NOS • G for Speedbreaker</span>
+            </div>
           </div>
         )}
       </div>
