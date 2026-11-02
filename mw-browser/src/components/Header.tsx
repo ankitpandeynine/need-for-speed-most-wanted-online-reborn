@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewTab } from '../types';
-import { Gauge, Sliders, HardDrive, Layers, Play, Square, Car, Users } from 'lucide-react';
+import { Gauge, Sliders, HardDrive, Layers, Play, Square, Car, Users, Trophy, Map, Warehouse, Disc } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: ViewTab;
@@ -37,20 +37,52 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <nav className="header-nav">
+      <nav className="header-nav" style={{ overflowX: 'auto', maxWidth: 'calc(100vw - 420px)' }}>
         <button
           onClick={() => onSelectTab('dashboard')}
           className={`nav-tab-btn ${currentTab === 'dashboard' ? 'active' : ''}`}
         >
-          <Gauge size={16} />
+          <Gauge size={15} />
           <span>Dashboard</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('blacklist')}
+          className={`nav-tab-btn ${currentTab === 'blacklist' ? 'active' : ''}`}
+        >
+          <Trophy size={15} color={currentTab === 'blacklist' ? '#f59e0b' : 'currentColor'} />
+          <span>Blacklist 15</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('map')}
+          className={`nav-tab-btn ${currentTab === 'map' ? 'active' : ''}`}
+        >
+          <Map size={15} />
+          <span>Rockport Map</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('garage')}
+          className={`nav-tab-btn ${currentTab === 'garage' ? 'active' : ''}`}
+        >
+          <Warehouse size={15} />
+          <span>Garage</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('eatrax')}
+          className={`nav-tab-btn ${currentTab === 'eatrax' ? 'active' : ''}`}
+        >
+          <Disc size={15} />
+          <span>EA Trax</span>
         </button>
 
         <button
           onClick={() => onSelectTab('multiplayer')}
           className={`nav-tab-btn ${currentTab === 'multiplayer' ? 'active' : ''}`}
         >
-          <Users size={16} />
+          <Users size={15} />
           <span>Multiplayer</span>
           <span className="live-pill">LIVE</span>
         </button>
@@ -59,23 +91,23 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onSelectTab('mods')}
           className={`nav-tab-btn ${currentTab === 'mods' ? 'active' : ''}`}
         >
-          <Layers size={16} />
-          <span>Mod Manager</span>
+          <Layers size={15} />
+          <span>Mods</span>
         </button>
 
         <button
           onClick={() => onSelectTab('storage')}
           className={`nav-tab-btn ${currentTab === 'storage' ? 'active' : ''}`}
         >
-          <HardDrive size={16} />
-          <span>Game Storage</span>
+          <HardDrive size={15} />
+          <span>Storage</span>
         </button>
 
         <button
           onClick={() => onSelectTab('settings')}
           className={`nav-tab-btn ${currentTab === 'settings' ? 'active' : ''}`}
         >
-          <Sliders size={16} />
+          <Sliders size={15} />
           <span>Settings</span>
         </button>
       </nav>

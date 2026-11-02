@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Sparkles, HardDrive, Zap, Gamepad2, Info, Trophy, Gauge, Shield, Users } from 'lucide-react';
+import { Play, Sparkles, HardDrive, Zap, Gamepad2, Info, Trophy, Gauge, Shield, Users, Map, Warehouse, Disc } from 'lucide-react';
 import { GameSettings, ModItem, StorageStatus } from '../types';
 
 interface DashboardProps {
@@ -10,6 +10,10 @@ interface DashboardProps {
   onOpenMods: () => void;
   onOpenStorage: () => void;
   onOpenMultiplayer?: () => void;
+  onOpenBlacklist?: () => void;
+  onOpenMap?: () => void;
+  onOpenGarage?: () => void;
+  onOpenEATrax?: () => void;
   webGpuName?: string;
 }
 
@@ -64,6 +68,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenMods,
   onOpenStorage,
   onOpenMultiplayer,
+  onOpenBlacklist,
+  onOpenMap,
+  onOpenGarage,
+  onOpenEATrax,
   webGpuName,
 }) => {
   const activeModsCount = mods.filter((m) => m.enabled).length;
@@ -109,28 +117,61 @@ export const Dashboard: React.FC<DashboardProps> = ({
             Featuring high-definition texture injection, widescreen FOV, custom vehicle mods, and browser-native virtual storage.
           </p>
 
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button onClick={onStartGame} className="btn btn-primary" style={{ padding: '14px 28px', fontSize: '16px' }}>
               <Play size={20} fill="#000" />
-              Launch Game Now
+              Launch 3D Game Now
             </button>
+            {onOpenBlacklist && (
+              <button
+                onClick={onOpenBlacklist}
+                className="btn btn-secondary"
+                style={{
+                  padding: '14px 20px',
+                  border: '1px solid #f59e0b',
+                  color: '#f59e0b',
+                  fontWeight: 700,
+                }}
+              >
+                <Trophy size={18} color="#f59e0b" />
+                Blacklist 15 Rivals
+              </button>
+            )}
+            {onOpenMap && (
+              <button onClick={onOpenMap} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
+                <Map size={18} color="#10b981" />
+                Rockport GPS Map
+              </button>
+            )}
+            {onOpenGarage && (
+              <button onClick={onOpenGarage} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
+                <Warehouse size={18} color="#06b6d4" />
+                3D Garage Showroom
+              </button>
+            )}
+            {onOpenEATrax && (
+              <button onClick={onOpenEATrax} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
+                <Disc size={18} color="#ec4899" />
+                EA Trax OST
+              </button>
+            )}
             {onOpenMultiplayer && (
               <button
                 onClick={onOpenMultiplayer}
                 className="btn btn-secondary"
                 style={{
-                  padding: '14px 24px',
-                  border: '1px solid #f59e0b',
+                  padding: '14px 20px',
+                  border: '1px solid #3b82f6',
                   color: '#fff',
                 }}
               >
-                <Users size={18} color="#f59e0b" />
-                Multiplayer Grid <span className="live-pill" style={{ marginLeft: '4px' }}>LIVE</span>
+                <Users size={18} color="#3b82f6" />
+                Multiplayer <span className="live-pill" style={{ marginLeft: '4px' }}>LIVE</span>
               </button>
             )}
-            <button onClick={onOpenMods} className="btn btn-secondary" style={{ padding: '14px 24px' }}>
-              <Sparkles size={18} color="#06b6d4" />
-              Manage Mods ({activeModsCount} Active)
+            <button onClick={onOpenMods} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
+              <Sparkles size={18} color="#a855f7" />
+              Mods ({activeModsCount})
             </button>
           </div>
         </div>
@@ -253,7 +294,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '16px' }}>
           {FEATURED_CARS.map((car, idx) => (
-            <div key={idx} className="glass-panel" style={{ padding: '18px', borderLeft: `3px solid ${car.color}` }}>
+            <div
+              key={idx}
+              className="glass-panel"
+              style={{ padding: '18px', borderLeft: `3px solid ${car.color}`, cursor: onOpenGarage ? 'pointer' : 'default' }}
+              onClick={onOpenGarage}
+              title="Click to view in 3D Garage Showroom"
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '11px', color: car.color, fontWeight: 700, textTransform: 'uppercase' }}>
                   {car.class}
@@ -274,12 +321,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Blacklist 15 Career Preview */}
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <Trophy size={20} color="#f59e0b" />
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
-            ROCKPORT BLACKLIST 15 LEADERBOARD
-          </h3>
+      <div
+        className="glass-panel"
+        style={{ padding: '24px', marginBottom: '32px', cursor: onOpenBlacklist ? 'pointer' : 'default' }}
+        onClick={onOpenBlacklist}
+        title="Click to view Blacklist 15 Career Dossiers & Races"
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Trophy size={20} color="#f59e0b" />
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
+              ROCKPORT BLACKLIST 15 LEADERBOARD
+            </h3>
+          </div>
+          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 700 }}>
+            VIEW FULL BLACKLIST →
+          </span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>

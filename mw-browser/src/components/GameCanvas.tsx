@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom } from '../types';
+import { GameSettings, ModItem, VehicleTelemetry, LobbyRoom, EATraxSong } from '../types';
 import { Square, Pause, Play, Monitor, Zap, Eye, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 import { MultiplayerService } from '../services/multiplayer';
+import { EATraxService } from '../services/eaTrax';
 import { NFSMWScene, CameraViewMode } from '../engine/graphics/NFSMWScene';
 import { VehiclePhysics, VehicleInput } from '../engine/physics/VehiclePhysics';
 import { NFSMWSoundEngine } from '../engine/audio/NFSMWSoundEngine';
@@ -13,6 +14,8 @@ interface GameCanvasProps {
   mods: ModItem[];
   onStopGame: () => void;
   webGpuAdapterName?: string;
+  initialVehicle?: string;
+  initialEventTitle?: string;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
@@ -20,6 +23,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   mods,
   onStopGame,
   webGpuAdapterName,
+  initialVehicle,
+  initialEventTitle,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportContainerRef = useRef<HTMLDivElement | null>(null);
@@ -28,7 +33,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Active View: 'game-3d' (Authentic 3D NFS MW Experience) or 'recomp-wasm' (Low-level recompiled binary debugger)
   const [activeView, setActiveView] = useState<'game-3d' | 'recomp-wasm'>('game-3d');
   const [cameraView, setCameraView] = useState<CameraViewMode>('chase-far');
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('bmw-m3-gtr');
+  const [selectedVehicle, setSelectedVehicle] = useState<string>(initialVehicle || 'bmw-m3-gtr');
+
+  // EA Trax State
+  const [currentTrack, setCurrentTrack] = useState<EATraxSong | null>(null);
+  const [showTraxBanner, setShowTraxBanner] = useState<boolean>(false);
 
   const [fps, setFps] = useState(120);
   const [isPaused, setIsPaused] = useState(false);
@@ -103,6 +112,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
+  // Subscribe to EA Trax track changes
+  useEffect(() => {
+    const trax = EATraxService.getInstance();
+    let bannerTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsub = trax.subscribe((song) => {
+      setCurrentTrack(song);
+      setShowTraxBanner(true);
+      if (bannerTimer) clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => setShowTraxBanner(false), 5500);
+    });
+    const cur = trax.getCurrentTrack();
+    if (cur) {
+      setCurrentTrack(cur);
+      setShowTraxBanner(true);
+      bannerTimer = setTimeout(() => setShowTraxBanner(false), 5500);
+    }
+    return () => {
+      unsub();
+      if (bannerTimer) clearTimeout(bannerTimer);
+    };
+  }, []);
+
   // Camera Cycle
   const cycleCamera = useCallback(() => {
     setCameraView((prev) => {
@@ -143,10 +174,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const scene = new NFSMWScene(container);
     sceneRef.current = scene;
     scene.setCameraView(cameraView);
+    if (selectedVehicle && selectedVehicle !== 'bmw-m3-gtr') {
+      scene.changeVehicle(selectedVehicle);
+    }
 
-    // Initialize Web Audio Synth on first click/key
+    // Initialize Web Audio Synth and EA Trax OST on first click/key
     const initAudio = () => {
       soundRef.current.init();
+      EATraxService.getInstance().play();
       window.removeEventListener('keydown', initAudio);
       window.removeEventListener('click', initAudio);
     };
@@ -191,6 +226,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           break;
         case 'KeyC':
           cycleCamera();
+          break;
+        case 'KeyT':
+          EATraxService.getInstance().nextTrack();
           break;
         case 'KeyR':
           resetVehicle();
@@ -493,6 +531,92 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               isFullscreen={isFullscreen}
               onToggleFullscreen={toggleFullscreen}
             />
+
+            {/* Mission / Race Event Header Pill */}
+            {initialEventTitle && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(12, 16, 24, 0.92)',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '20px',
+                  padding: '6px 20px',
+                  color: '#f59e0b',
+                  fontWeight: 800,
+                  fontSize: '12px',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  zIndex: 35,
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.7)',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                <span>🏁 {initialEventTitle}</span>
+              </div>
+            )}
+
+            {/* Authentic EA TRAX Slide-In Banner */}
+            {showTraxBanner && currentTrack && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '20px',
+                  zIndex: 45,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  background: 'linear-gradient(135deg, rgba(14, 18, 26, 0.96) 0%, rgba(22, 28, 42, 0.98) 100%)',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  borderLeft: '5px solid #f59e0b',
+                  borderRadius: '8px',
+                  padding: '12px 20px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(245, 158, 11, 0.25)',
+                  pointerEvents: 'none',
+                  maxWidth: '380px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '6px',
+                    background: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '10px',
+                    color: '#000',
+                    lineHeight: 1.1,
+                    textAlign: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  EA
+                  <br />
+                  TRAX
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    EA TRAX™ • [T] NEXT TRACK
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentTrack.title}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentTrack.artist} • <span style={{ color: '#94a3b8' }}>{currentTrack.album}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           /* Recompiled WASM Iframe View */

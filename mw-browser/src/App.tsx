@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ViewTab, GameSettings, ModItem, StorageStatus } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { BlacklistView } from './components/BlacklistView';
+import { WorldMapView } from './components/WorldMapView';
+import { GarageView } from './components/GarageView';
+import { EATraxView } from './components/EATraxView';
 import { MultiplayerView } from './components/MultiplayerView';
 import { ModManagerView } from './components/ModManagerView';
 import { StorageManagerView } from './components/StorageManagerView';
@@ -33,6 +37,8 @@ export const App: React.FC = () => {
   const [webGpuAdapterName, setWebGpuAdapterName] = useState<string | undefined>();
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [mods, setMods] = useState<ModItem[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('bmw-m3-gtr');
+  const [activeEventTitle, setActiveEventTitle] = useState<string | undefined>();
   const [storage, setStorage] = useState<StorageStatus>({
     hasSpeedExe: true, // Default to ready for presentation
     speedExeValid: true,
@@ -132,6 +138,8 @@ export const App: React.FC = () => {
             mods={mods}
             onStopGame={() => runtime.stopSession()}
             webGpuAdapterName={webGpuAdapterName}
+            initialVehicle={selectedVehicle}
+            initialEventTitle={activeEventTitle}
           />
         )}
 
@@ -144,13 +152,53 @@ export const App: React.FC = () => {
             onOpenMods={() => setCurrentTab('mods')}
             onOpenStorage={() => setCurrentTab('storage')}
             onOpenMultiplayer={() => setCurrentTab('multiplayer')}
+            onOpenBlacklist={() => setCurrentTab('blacklist')}
+            onOpenMap={() => setCurrentTab('map')}
+            onOpenGarage={() => setCurrentTab('garage')}
+            onOpenEATrax={() => setCurrentTab('eatrax')}
             webGpuName={webGpuAdapterName}
           />
         )}
 
+        {currentTab === 'blacklist' && (
+          <BlacklistView
+            onLaunchEvent={(event, rival) => {
+              setActiveEventTitle(`${event.title} • Rival: #${rival.rank} ${rival.alias}`);
+              runtime.startSession();
+              setCurrentTab('game');
+            }}
+          />
+        )}
+
+        {currentTab === 'map' && (
+          <WorldMapView
+            onStartDriveAt={(location) => {
+              setActiveEventTitle(`Rockport GPS • ${location.district}: ${location.title}`);
+              runtime.startSession();
+              setCurrentTab('game');
+            }}
+          />
+        )}
+
+        {currentTab === 'garage' && (
+          <GarageView
+            selectedVehicleId={selectedVehicle}
+            onSelectVehicle={(id) => setSelectedVehicle(id)}
+            onLaunchDrive={(carId) => {
+              setSelectedVehicle(carId);
+              setActiveEventTitle('Free Roam • Rockport Highway 99');
+              runtime.startSession();
+              setCurrentTab('game');
+            }}
+          />
+        )}
+
+        {currentTab === 'eatrax' && <EATraxView />}
+
         {currentTab === 'multiplayer' && (
           <MultiplayerView
             onStartOnlineRace={() => {
+              setActiveEventTitle('Online Multiplayer Grid Match');
               runtime.startSession();
               setCurrentTab('game');
             }}
