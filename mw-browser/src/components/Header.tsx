@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewTab } from '../types';
-import { Play, Square, Gauge, Smartphone, Sliders, HardDrive } from 'lucide-react';
+import { Play, Square, Gauge, Smartphone, Sliders, HardDrive, Users } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: ViewTab;
@@ -48,12 +48,22 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
+          onClick={() => onSelectTab('multiplayer')}
+          className={`nav-tab-btn ${currentTab === 'multiplayer' ? 'active' : ''}`}
+          title="Online Multiplayer Rooms"
+        >
+          <Users size={15} color={currentTab === 'multiplayer' ? '#06b6d4' : 'currentColor'} />
+          <span>Multiplayer</span>
+          <span className="live-pill" style={{ marginLeft: '4px' }}>ROOMS</span>
+        </button>
+
+        <button
           onClick={() => onSelectTab('controls')}
           className={`nav-tab-btn ${currentTab === 'controls' ? 'active' : ''}`}
-          title="Mobile Touch Controls & Gyroscope Steering"
+          title="PC Keybindings, Gamepads & Mobile Gyro"
         >
           <Smartphone size={15} color={currentTab === 'controls' ? '#f59e0b' : 'currentColor'} />
-          <span>Mobile & Controls</span>
+          <span>Controls & Hardware</span>
         </button>
 
         <button
@@ -68,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={() => onSelectTab('storage')}
           className={`nav-tab-btn ${currentTab === 'storage' ? 'active' : ''}`}
-          title="Game Files & OPFS Cache Storage"
+          title="Game Files & OPFS Offline Cache Storage"
         >
           <HardDrive size={15} />
           <span>Game Assets</span>

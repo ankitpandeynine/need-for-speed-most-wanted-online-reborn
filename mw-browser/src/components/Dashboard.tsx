@@ -1,12 +1,13 @@
 import React from 'react';
-import { Play, Smartphone, Sliders, HardDrive, Zap, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Play, HardDrive, Zap, ShieldCheck, ChevronRight, Users, DownloadCloud, Gamepad2 } from 'lucide-react';
 import { GameSettings, StorageStatus } from '../types';
 
 interface DashboardProps {
-  onStartGame: () => void;
+  onStartGame: (offlinePreload?: boolean) => void;
   settings: GameSettings;
   storage: StorageStatus;
   onOpenControls: () => void;
+  onOpenMultiplayer: () => void;
   onOpenSettings: () => void;
   onOpenStorage: () => void;
   webGpuName?: string;
@@ -17,6 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   settings,
   storage,
   onOpenControls,
+  onOpenMultiplayer,
   onOpenSettings,
   onOpenStorage,
   webGpuName,
@@ -36,7 +38,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(245, 158, 11, 0.2)',
         }}
       >
-        {/* Subtle decorative background stripe */}
         <div
           style={{
             position: 'absolute',
@@ -49,7 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           }}
         />
 
-        <div style={{ maxWidth: '720px', position: 'relative', zIndex: 10 }}>
+        <div style={{ maxWidth: '750px', position: 'relative', zIndex: 10 }}>
           {/* Badge */}
           <div
             style={{
@@ -73,7 +74,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 letterSpacing: '0.08em',
               }}
             >
-              WebGPU • Ahead-Of-Time Recompiled WASM
+              WebGPU • 120 Hz Simulation • Zero-Lag Offline Caching
             </span>
           </div>
 
@@ -92,40 +93,57 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </h1>
 
           <p style={{ color: '#94a3b8', fontSize: '15.5px', marginBottom: '28px', lineHeight: 1.6 }}>
-            Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers.
-            Featuring locked 120 Hz physics simulation, on-screen mobile touch pedals, gyroscope tilt steering, and native OPFS storage caching.
+            Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers ({webGpuName || 'WebGPU'} • {settings.resolution.toUpperCase()} 120 Hz).
+            Now with background asset pre-downloading for zero-lag offline gameplay, PC key rebinding, gamepad controller support, and online multiplayer rooms.
           </p>
 
-          {/* Single-Click Big Action Buttons */}
+          {/* Big Action Buttons */}
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={onStartGame}
+              onClick={() => onStartGame(false)}
               className="btn btn-primary"
               style={{
-                padding: '14px 34px',
-                fontSize: '16px',
+                padding: '14px 32px',
+                fontSize: '15px',
                 fontWeight: 900,
                 letterSpacing: '0.06em',
                 boxShadow: '0 0 24px rgba(245, 158, 11, 0.45)',
               }}
             >
-              <Play size={20} fill="#000" />
+              <Play size={18} fill="#000" />
               START ENGINE / PLAY NOW
             </button>
 
             <button
-              onClick={onOpenControls}
+              onClick={() => onStartGame(true)}
+              className="btn btn-secondary"
+              style={{
+                padding: '14px 22px',
+                fontSize: '14px',
+                fontWeight: 800,
+                borderColor: '#10b981',
+                color: '#10b981',
+                background: 'rgba(16, 185, 129, 0.1)',
+              }}
+              title="Pre-downloads all maps into local OPFS cache for 0 network lag"
+            >
+              <DownloadCloud size={17} color="#10b981" />
+              0-Lag Offline Launch
+            </button>
+
+            <button
+              onClick={onOpenMultiplayer}
               className="btn btn-secondary"
               style={{
                 padding: '14px 20px',
                 fontSize: '14px',
                 fontWeight: 700,
-                borderColor: '#f59e0b',
-                color: '#f59e0b',
+                borderColor: '#06b6d4',
+                color: '#06b6d4',
               }}
             >
-              <Smartphone size={17} color="#f59e0b" />
-              Mobile & Touch Controls
+              <Users size={17} color="#06b6d4" />
+              Multiplayer Rooms
             </button>
           </div>
         </div>
@@ -140,7 +158,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           marginBottom: '32px',
         }}
       >
-        {/* Card 1: Mobile & Touch Controls */}
+        {/* Card 1: PC Keybindings & Gamepad */}
         <div
           className="glass-panel"
           style={{
@@ -156,40 +174,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                CONTROLS & MOBILE
+                HARDWARE & CONTROLS
               </span>
-              <Smartphone size={18} color="#f59e0b" />
+              <Gamepad2 size={18} color="#f59e0b" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              Touch & Gyro Steering
+              Keybindings & Gamepads
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              On-screen virtual pedals for Gas, Brake, Left, Right, Nitrous, Handbrake, plus phone tilt steering.
+              Rebind PC keys, connect Xbox / PlayStation controllers, or use mobile touch pedals & tilt steering.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Touch Layout:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>Adaptive (Split Pedals)</span>
+                <span style={{ color: '#64748b' }}>PC Keyboard:</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>Custom Rebinding Active</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Phone Gyroscope:</span>
-                <span style={{ color: settings.mobileControls.gyroEnabled ? '#06b6d4' : '#cbd5e1', fontWeight: 700 }}>
-                  {settings.mobileControls.gyroEnabled ? 'Sensors Active' : 'Supported'}
-                </span>
+                <span style={{ color: '#64748b' }}>Gamepad Support:</span>
+                <span style={{ color: '#06b6d4', fontWeight: 700 }}>RT / LT & Dual Analogue</span>
               </div>
             </div>
           </div>
 
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '13px', fontWeight: 700 }}>
-            <span>Customize Touch Controls</span>
+            <span>Configure Keybinds & Gamepad</span>
             <ChevronRight size={15} />
           </div>
         </div>
 
-        {/* Card 2: Engine & Graphics */}
+        {/* Card 2: Online Multiplayer Rooms */}
         <div
           className="glass-panel"
           style={{
@@ -200,43 +216,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
             cursor: 'pointer',
             transition: 'border-color 0.2s',
           }}
-          onClick={onOpenSettings}
+          onClick={onOpenMultiplayer}
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                ENGINE & GRAPHICS
+                ONLINE MULTIPLAYER
               </span>
-              <Sliders size={18} color="#06b6d4" />
+              <Users size={18} color="#06b6d4" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              WebGPU Metal / Vulkan
+              Race in Private Rooms
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              {webGpuName ? `${webGpuName} • ` : ''}Direct3D 9 translated to WebGPU WGSL shaders. Runs smoothly at locked 120 Hz physics simulation.
+              Host or join multiplayer rooms with 6-character room codes. Synchronized telemetry & real-time radio taunts.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Resolution:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>1280×720 (16:9 Widescreen)</span>
+                <span style={{ color: '#64748b' }}>Networking:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>P2P WebRTC / BroadcastChannel</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Physics Rate:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>120 Hz Fixed Rate</span>
+                <span style={{ color: '#64748b' }}>Modes:</span>
+                <span style={{ color: '#06b6d4', fontWeight: 700 }}>Sprint, Circuit & Pursuit Tag</span>
               </div>
             </div>
           </div>
 
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '13px', fontWeight: 700 }}>
-            <span>Tune Display & Sound</span>
+            <span>Join or Create Room</span>
             <ChevronRight size={15} />
           </div>
         </div>
 
-        {/* Card 3: Storage & Game Files */}
+        {/* Card 3: Storage & Offline Cache */}
         <div
           className="glass-panel"
           style={{
@@ -252,7 +268,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                GAME ASSETS
+                GAME ASSETS & OFFLINE CACHE
               </span>
               <HardDrive size={18} color="#10b981" />
             </div>
@@ -262,7 +278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              Cached locally in your browser’s Origin Private File System. Import your retail folder once or stream on demand.
+              Pre-download maps to eliminate in-race stuttering on slow internet, or select your local game folder.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
@@ -273,20 +289,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Storage Persistence:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>Persistent (No Wipe)</span>
+                <span style={{ color: '#64748b' }}>Offline Ready:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>OPFS Persistent</span>
               </div>
             </div>
           </div>
 
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '13px', fontWeight: 700 }}>
-            <span>Manage Storage & Import</span>
+            <span>Manage Cache & Pre-Download</span>
             <ChevronRight size={15} />
           </div>
         </div>
       </div>
 
-      {/* Quick Play Instructions */}
+      {/* Free Hosting & Open Source Notice */}
       <div
         className="glass-panel"
         style={{
@@ -305,20 +321,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <ShieldCheck size={22} color="#10b981" />
           <div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
-              100% Free & Open Source ($0 Cost)
+              100% Free to Host on Vercel & GitHub Pages ($0 Cost)
             </div>
             <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
-              Host anywhere on GitHub Pages or Vercel. Stream assets via Cloudflare R2 or import your local game folder.
+              Host the web app on Vercel/GitHub Pages and stream 1.4 GB game assets for free using Cloudflare R2 (0 egress fees).
             </div>
           </div>
         </div>
 
         <button
-          onClick={onStartGame}
+          onClick={onOpenSettings}
           className="btn btn-secondary"
           style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b' }}
         >
-          Launch Now
+          Graphics & Audio
         </button>
       </div>
     </div>

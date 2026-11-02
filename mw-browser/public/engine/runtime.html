@@ -217,6 +217,29 @@ async function gameId() {
   return decodeURIComponent(parts[parts.length - 1] || "nfsmw");
 }
 
+async function startBackgroundDownloader(game) {
+  try {
+    const manifestUrl = new URL(game.hostedAssets, new URL("../games.json", location.href)).href;
+    const bgWorker = new Worker("../worker.js", { type: "module" });
+    bgWorker.onmessage = ({ data }) => {
+      if (data.progress) {
+        window.parent?.postMessage({
+          type: "recomp-background-download-progress",
+          progress: data.progress,
+        }, "*");
+      } else if (data.result === "done") {
+        window.parent?.postMessage({
+          type: "recomp-background-download-complete",
+        }, "*");
+        bgWorker.terminate();
+      }
+    };
+    bgWorker.postMessage({ id: 8888, cmd: "import", game, kind: "hosted", manifestUrl });
+  } catch (err) {
+    console.warn("Background downloader could not start:", err);
+  }
+}
+
 async function prepareGame(game) {
   const worker = new Worker("../worker.js", { type: "module" });
   let nextId = 0;
@@ -226,6 +249,7 @@ async function prepareGame(game) {
       const p = data.progress;
       const percent = p.bytesTotal ? Math.floor(p.bytesDone / p.bytesTotal * 100) : 0;
       status(`Downloading game · ${percent}%\n${data.startup ? `${(p.bytesDone / 1024 ** 2).toFixed(1)} of ${(p.bytesTotal / 1024 ** 2).toFixed(1)} MB` : `${(p.bytesDone / 1024 ** 3).toFixed(2)} of ${(p.bytesTotal / 1024 ** 3).toFixed(2)} GB`}\n${data.startup ? "Other game files load as they are needed." : "Your next visit will use the cached files."}`);
+      window.parent?.postMessage({ type: "recomp-initial-progress", progress: p }, "*");
       return;
     }
     const request = pending.get(data.id);
@@ -246,14 +270,24 @@ async function prepareGame(game) {
   try {
     status("Checking game files…");
     const cached = await request("status");
-    if (cached.status.state === "ready") return false;
+    if (cached.status.state === "ready") {
+      window.parent?.postMessage({ type: "recomp-storage-ready" }, "*");
+      return false;
+    }
     if (!game.hostedAssets) throw new Error(`${game.title} has not been imported yet.`);
-    status("Preparing your first play…\nDownloading game files automatically.");
+    const params = new URLSearchParams(location.search);
+    const forceOffline = params.get("offline") === "1" || params.get("predownload") === "1";
+    status(forceOffline
+      ? "Downloading full game for 0-lag offline play…\nPlease wait while all maps and cars are cached."
+      : "Preparing your first play…\nDownloading game files automatically.");
     const manifestUrl = new URL(game.hostedAssets, new URL("../games.json", location.href)).href;
-    const streamed = game.streamAssets && game.assetBase;
+    const streamed = !forceOffline && game.streamAssets && game.assetBase;
     const outcome = await request(streamed ? "streamSetup" : "import", { kind: "hosted", manifestUrl });
     if (outcome.result === "noSpace") throw new Error("There isn't enough browser storage for this game.");
     if (outcome.result !== "done") throw new Error(outcome.error || "Game download did not finish. Stop and try Start again to resume.");
+    if (streamed && params.get("nobg") !== "1") {
+      setTimeout(() => startBackgroundDownloader(game), 4000);
+    }
     return !!streamed;
   } finally {
     worker.terminate();
@@ -359,8 +393,19 @@ async function start() {
 }
 
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-canvas.addEventListener("click", () => canvas.focus());
-canvas.addEventListener("touchstart", (e) => { e.preventDefault(); canvas.focus(); }, { passive: false });
+canvas.addEventListener("click", () => {
+  canvas.focus();
+  if (navigator.keyboard && typeof navigator.keyboard.lock === "function") {
+    navigator.keyboard.lock(["Escape"]).catch(() => {});
+  }
+});
+canvas.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  canvas.focus();
+  if (navigator.keyboard && typeof navigator.keyboard.lock === "function") {
+    navigator.keyboard.lock(["Escape"]).catch(() => {});
+  }
+}, { passive: false });
 
 // Handle virtual touch & gyro input forwarded from parent window
 window.addEventListener("message", (e) => {

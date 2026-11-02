@@ -15,6 +15,19 @@ export interface MobileControlSettings {
   gyroDeadzone: number; // 1 to 10 degrees
 }
 
+export interface KeyBindings {
+  accelerate: string; // default: 'ArrowUp'
+  brake: string; // default: 'ArrowDown'
+  steerLeft: string; // default: 'ArrowLeft'
+  steerRight: string; // default: 'ArrowRight'
+  nitrous: string; // default: 'ShiftLeft'
+  handbrake: string; // default: 'Space'
+  speedbreaker: string; // default: 'KeyG'
+  camera: string; // default: 'KeyC'
+  reset: string; // default: 'KeyR'
+  pause: string; // default: 'Escape'
+}
+
 export interface GameSettings {
   resolution: '720p' | '1080p' | '1440p' | 'auto';
   frameRateLimit: 30 | 60 | 120;
@@ -29,6 +42,9 @@ export interface GameSettings {
   musicVolume: number; // 0 - 100
   controllerLayout: 'xbox' | 'playstation' | 'keyboard_arrows' | 'keyboard_wasd';
   mobileControls: MobileControlSettings;
+  keyBindings: KeyBindings;
+  offlinePreload: boolean;
+  backgroundDownloading: boolean;
 }
 
 export interface ModItem {
@@ -56,6 +72,7 @@ export interface StorageStatus {
 
 export type ViewTab =
   | 'dashboard'
+  | 'multiplayer'
   | 'controls'
   | 'settings'
   | 'storage'

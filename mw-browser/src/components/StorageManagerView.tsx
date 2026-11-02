@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StorageStatus } from '../types';
-import { CheckCircle2, AlertCircle, FolderOpen, Trash2, ShieldCheck, Database, Zap, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FolderOpen, Trash2, ShieldCheck, Database, RefreshCw, DownloadCloud } from 'lucide-react';
 import { PINNED_SPEED_EXE_SHA256 } from '../services/storage';
 
 interface StorageManagerViewProps {
@@ -40,7 +40,7 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
 
       const handle = await (window as any).showDirectoryPicker({ id: 'game-nfsmw', mode: 'read' });
 
-      setImportMessage('Scanning game files and indexing directory structure...');
+      setImportMessage('Scanning game files and indexing directory structure into OPFS...');
 
       const worker = new Worker('/worker.js', { type: 'module' });
       let nextId = 1;
@@ -84,11 +84,11 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
     }
   };
 
-  // Fast local streaming preparation
-  const handleSetupStream = async () => {
+  // Pre-download ALL game assets & maps into OPFS for 0-lag offline play
+  const handlePreDownloadAll = async () => {
     try {
       setImporting(true);
-      setImportMessage('Preparing local disk stream (pinning speed.exe)...');
+      setImportMessage('Connecting to game repository and preparing full pre-download...');
 
       const worker = new Worker('/worker.js', { type: 'module' });
       let nextId = 1;
@@ -97,7 +97,7 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
         if (data.progress) {
           const p = data.progress;
           const percent = p.bytesTotal ? Math.floor((p.bytesDone / p.bytesTotal) * 100) : 0;
-          setImportMessage(`Streaming speed.exe: ${percent}% (${formatBytes(p.bytesDone)} / ${formatBytes(p.bytesTotal)})`);
+          setImportMessage(`Pre-downloading maps & assets: ${percent}% (${formatBytes(p.bytesDone)} / ${formatBytes(p.bytesTotal)}) - ${p.current || ''}`);
           return;
         }
 
@@ -105,11 +105,11 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
           worker.terminate();
           setImporting(false);
           if (data.error) {
-            setImportMessage(`Setup error: ${data.error}`);
+            setImportMessage(`Download error: ${data.error}`);
           } else {
-            setImportMessage('Local streaming setup complete! Launch Game now to play.');
-            onImportComplete(1364);
-            setTimeout(() => setImportMessage(null), 5000);
+            setImportMessage('✓ All maps, tracks, cars & audio cached in OPFS! Game is ready for 0-lag offline play.');
+            onImportComplete(1406);
+            setTimeout(() => setImportMessage(null), 8000);
           }
         }
       };
@@ -120,12 +120,13 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
 
       worker.postMessage({
         id: nextId,
-        cmd: 'streamSetup',
+        cmd: 'import',
         game,
+        kind: 'hosted',
         manifestUrl,
       });
     } catch (err: any) {
-      setImportMessage(`Stream setup error: ${err.message}`);
+      setImportMessage(`Pre-download error: ${err.message}`);
       setImporting(false);
     }
   };
@@ -133,11 +134,11 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-          GAME ASSET STORAGE & VERIFICATION
+        <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '4px', letterSpacing: '-0.02em' }}>
+          GAME ASSET STORAGE & OFFLINE CACHE
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-          Manage your local Need for Speed: Most Wanted Black Edition game installation in the browser.
+        <p style={{ color: '#94a3b8', fontSize: '14.5px' }}>
+          Manage your local Need for Speed: Most Wanted Black Edition game installation, OPFS browser storage, and zero-lag offline caching.
         </p>
       </div>
 
@@ -216,54 +217,80 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
 
       {importMessage && (
         <div style={{ padding: '14px 18px', background: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.4)', borderRadius: '8px', color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', fontSize: '14px' }}>
-          <RefreshCw size={18} className={importing ? 'spin' : ''} />
+          <RefreshCw size={18} className={importing ? 'spin-anim' : ''} />
           <span>{importMessage}</span>
         </div>
       )}
 
-      {/* Actions */}
-      <div className="glass-panel" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            Import Game Files & Setup
-          </h4>
-          <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-            Choose either <strong>Instant Local Stream</strong> (zero waiting) or <strong>Import Folder</strong> to cache assets in your browser.
+      {/* Action Options */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        {/* Option 1: Pre-download Full Game for Zero-Lag Offline Play */}
+        <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(245, 158, 11, 0.35)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(15, 20, 28, 0.95) 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <DownloadCloud size={22} color="#f59e0b" />
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>
+              Zero-Lag Offline Mode (Pre-download)
+            </h3>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '13.5px', lineHeight: 1.5, marginBottom: '20px' }}>
+            Eliminates buffering and in-race lag spikes on slow internet. Pre-downloads all tracks, textures, and cars into your browser's OPFS storage once.
           </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
-            onClick={handleSetupStream}
+            onClick={handlePreDownloadAll}
             disabled={importing}
             className="btn btn-primary"
-            style={{ fontSize: '13px', padding: '10px 18px' }}
+            style={{ width: '100%', padding: '12px', fontSize: '14px', fontWeight: 800 }}
           >
-            <Zap size={16} />
-            Quick Stream Local Game
+            <DownloadCloud size={16} fill="#000" />
+            {importing ? 'Downloading...' : 'Pre-Download Full Game (1.4 GB) to OPFS'}
           </button>
+        </div>
 
+        {/* Option 2: Import Local Game Folder */}
+        <div className="glass-panel" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <FolderOpen size={22} color="#10b981" />
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>
+              Import Local NFS Folder
+            </h3>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '13.5px', lineHeight: 1.5, marginBottom: '20px' }}>
+            Have Need for Speed: Most Wanted installed on your computer? Select your folder to import directly with 0 download required.
+          </p>
           <button
             onClick={handleRealImport}
             disabled={importing}
             className="btn btn-secondary"
-            style={{ fontSize: '13px', padding: '10px 18px' }}
+            style={{ width: '100%', padding: '12px', fontSize: '14px', fontWeight: 800, borderColor: '#10b981', color: '#10b981' }}
           >
-            <FolderOpen size={16} />
-            Import Game Folder
+            <FolderOpen size={16} color="#10b981" />
+            Select Local Game Folder
           </button>
-
-          {storage.hasSpeedExe && (
-            <button
-              onClick={onClearStorage}
-              className="btn btn-danger"
-              style={{ fontSize: '13px', padding: '10px 16px' }}
-            >
-              <Trash2 size={16} />
-              Clear Storage
-            </button>
-          )}
         </div>
+      </div>
+
+      {/* Danger Zone: Clear Storage */}
+      <div className="glass-panel" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', borderColor: '#451a1a' }}>
+        <div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: '#fca5a5' }}>
+            Clear Browser Game Cache
+          </div>
+          <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+            Deletes all cached tracks and binaries from OPFS. (Your career save files are preserved).
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            if (confirm('Are you sure you want to clear cached game files from browser storage?')) {
+              onClearStorage();
+            }
+          }}
+          className="btn btn-danger"
+          style={{ padding: '8px 18px', fontSize: '13px' }}
+        >
+          <Trash2 size={14} /> Clear Cache
+        </button>
       </div>
     </div>
   );

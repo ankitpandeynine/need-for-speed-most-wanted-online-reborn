@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings } from './types';
+import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings, KeyBindings } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { ControlsView } from './components/ControlsView';
+import { MultiplayerView } from './components/MultiplayerView';
 import { StorageManagerView } from './components/StorageManagerView';
 import { SettingsModal } from './components/SettingsModal';
 import { GameCanvas } from './components/GameCanvas';
@@ -22,6 +23,19 @@ const DEFAULT_MOBILE_SETTINGS: MobileControlSettings = {
   gyroDeadzone: 3,
 };
 
+const DEFAULT_KEY_BINDINGS: KeyBindings = {
+  accelerate: 'ArrowUp',
+  brake: 'ArrowDown',
+  steerLeft: 'ArrowLeft',
+  steerRight: 'ArrowRight',
+  nitrous: 'ShiftLeft',
+  handbrake: 'Space',
+  speedbreaker: 'KeyG',
+  camera: 'KeyC',
+  reset: 'KeyR',
+  pause: 'Escape',
+};
+
 const DEFAULT_SETTINGS: GameSettings = {
   resolution: '720p',
   frameRateLimit: 120,
@@ -36,6 +50,9 @@ const DEFAULT_SETTINGS: GameSettings = {
   musicVolume: 75,
   controllerLayout: 'keyboard_arrows',
   mobileControls: DEFAULT_MOBILE_SETTINGS,
+  keyBindings: DEFAULT_KEY_BINDINGS,
+  offlinePreload: false,
+  backgroundDownloading: true,
 };
 
 export const App: React.FC = () => {
@@ -43,7 +60,18 @@ export const App: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [webGpuSupported, setWebGpuSupported] = useState(false);
   const [webGpuAdapterName, setWebGpuAdapterName] = useState<string | undefined>();
-  const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<GameSettings>(() => {
+    try {
+      const savedBinds = localStorage.getItem('nfsmw_keybindings');
+      if (savedBinds) {
+        return {
+          ...DEFAULT_SETTINGS,
+          keyBindings: JSON.parse(savedBinds),
+        };
+      }
+    } catch {}
+    return DEFAULT_SETTINGS;
+  });
   const [mods, setMods] = useState<ModItem[]>([]);
   const [storage, setStorage] = useState<StorageStatus>({
     hasSpeedExe: true,
@@ -81,10 +109,13 @@ export const App: React.FC = () => {
     return unsub;
   }, []);
 
-  const handleToggleGame = () => {
+  const handleToggleGame = (offlinePreload?: boolean) => {
     if (isRunning) {
       runtime.stopSession();
     } else {
+      if (typeof offlinePreload === 'boolean') {
+        setSettings((prev) => ({ ...prev, offlinePreload }));
+      }
       runtime.startSession();
     }
   };
@@ -103,6 +134,22 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleUpdateKeyBindings = (newPartial: Partial<KeyBindings>) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        keyBindings: {
+          ...prev.keyBindings,
+          ...newPartial,
+        },
+      };
+      try {
+        localStorage.setItem('nfsmw_keybindings', JSON.stringify(updated.keyBindings));
+      } catch {}
+      return updated;
+    });
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header
@@ -110,7 +157,7 @@ export const App: React.FC = () => {
         onSelectTab={setCurrentTab}
         isRunning={isRunning}
         webGpuSupported={webGpuSupported}
-        onToggleGame={handleToggleGame}
+        onToggleGame={() => handleToggleGame()}
       />
 
       <main
@@ -137,17 +184,29 @@ export const App: React.FC = () => {
             settings={settings}
             storage={storage}
             onOpenControls={() => setCurrentTab('controls')}
+            onOpenMultiplayer={() => setCurrentTab('multiplayer')}
             onOpenSettings={() => setCurrentTab('settings')}
             onOpenStorage={() => setCurrentTab('storage')}
             webGpuName={webGpuAdapterName}
           />
         )}
 
+        {currentTab === 'multiplayer' && (
+          <MultiplayerView
+            onStartOnlineRace={() => {
+              runtime.startSession();
+              setCurrentTab('game');
+            }}
+          />
+        )}
+
         {currentTab === 'controls' && (
           <ControlsView
             settings={settings.mobileControls}
+            keyBindings={settings.keyBindings}
             onUpdateSettings={handleUpdateMobileSettings}
-            onLaunchGame={handleToggleGame}
+            onUpdateKeyBindings={handleUpdateKeyBindings}
+            onLaunchGame={() => handleToggleGame()}
           />
         )}
 

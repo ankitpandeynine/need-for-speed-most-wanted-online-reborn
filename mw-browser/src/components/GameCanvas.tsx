@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameSettings, ModItem, MobileControlSettings } from '../types';
-import { Square, Zap, Eye, Maximize2, Minimize2, ExternalLink, Smartphone } from 'lucide-react';
+import { Square, Eye, Maximize2, Minimize2, ExternalLink, Smartphone, Gamepad2, Pause, DownloadCloud, CheckCircle2 } from 'lucide-react';
 import { TouchControls } from './TouchControls';
 
 interface GameCanvasProps {
@@ -14,18 +14,27 @@ interface GameCanvasProps {
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
   settings: _settings,
-  mods,
+  mods: _mods,
   onStopGame,
-  webGpuAdapterName,
+  webGpuAdapterName: _webGpuAdapterName,
   initialVehicle: _initialVehicle,
   initialEventTitle: _initialEventTitle,
 }) => {
   const viewportContainerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const [showHelpBanner, setShowHelpBanner] = useState<boolean>(true);
   const [showTelemetry, setShowTelemetry] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [connectedGamepadName, setConnectedGamepadName] = useState<string | null>(null);
+
+  // Background download status
+  const [downloadProgress, setDownloadProgress] = useState<{
+    bytesDone: number;
+    bytesTotal: number;
+    percent: number;
+    isBackground: boolean;
+  } | null>(null);
+  const [downloadCompleted, setDownloadCompleted] = useState<boolean>(false);
 
   // Mobile detection & Touch Controls State
   const isTouchDevice =
@@ -69,6 +78,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     });
   };
 
+  // Sync mobile settings if updated by parent
+  useEffect(() => {
+    if (_settings?.mobileControls) {
+      setMobileSettings((prev) => ({ ...prev, ..._settings.mobileControls }));
+    }
+  }, [_settings?.mobileControls]);
+
   // Track window resize & orientation
   useEffect(() => {
     const handleResize = () => {
@@ -82,10 +98,28 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
-  // Track Fullscreen state
+  // Track Fullscreen state and manage Keyboard Lock
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const handleFullscreenChange = async () => {
+      const isNowFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isNowFullscreen);
+      const nav = navigator as any;
+      if (isNowFullscreen) {
+        if (nav.keyboard && typeof nav.keyboard.lock === 'function') {
+          try {
+            await nav.keyboard.lock(['Escape']);
+            console.log('[NFSMW] Keyboard Lock active: Escape key mapped to in-game menu');
+          } catch (e) {
+            console.warn('[NFSMW] Keyboard Lock not permitted:', e);
+          }
+        }
+      } else {
+        if (nav.keyboard && typeof nav.keyboard.unlock === 'function') {
+          try {
+            nav.keyboard.unlock();
+          } catch {}
+        }
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => {
@@ -93,14 +127,25 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = useCallback(async () => {
+    const nav = navigator as any;
     if (!document.fullscreenElement) {
       if (viewportContainerRef.current?.requestFullscreen) {
-        viewportContainerRef.current.requestFullscreen().catch((err) => {
+        try {
+          await viewportContainerRef.current.requestFullscreen();
+          if (nav.keyboard && typeof nav.keyboard.lock === 'function') {
+            await nav.keyboard.lock(['Escape']).catch(() => {});
+          }
+        } catch (err) {
           console.error('Error enabling fullscreen:', err);
-        });
+        }
       }
     } else {
+      if (nav.keyboard && typeof nav.keyboard.unlock === 'function') {
+        try {
+          nav.keyboard.unlock();
+        } catch {}
+      }
       if (document.exitFullscreen) {
         document.exitFullscreen().catch((err) => {
           console.error('Error exiting fullscreen:', err);
@@ -108,20 +153,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
     }
   }, []);
-
-  // Keyboard shortcut: F for fullscreen
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'f' || e.key === 'F') {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
-          toggleFullscreen();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleFullscreen]);
 
   // Dispatch virtual key press to the iframe runtime
   const handleVirtualKey = useCallback(
@@ -156,13 +187,210 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           doc.dispatchEvent(evt);
         }
       } catch {
-        // PostMessage handles isolated cases
+        // Cross-origin isolated fallback handled by postMessage
       }
     },
     []
   );
 
-  // Automatically focus the real game iframe on load and on click
+  // Trigger in-game Pause (Escape)
+  const triggerPause = useCallback(() => {
+    handleVirtualKey('Escape', 'Escape', 27, 'down');
+    setTimeout(() => {
+      handleVirtualKey('Escape', 'Escape', 27, 'up');
+    }, 120);
+  }, [handleVirtualKey]);
+
+  // Listen to background asset download progress
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'recomp-background-download-progress' || e.data?.type === 'recomp-initial-progress') {
+        const p = e.data.progress;
+        if (p) {
+          const percent = p.bytesTotal ? Math.floor((p.bytesDone / p.bytesTotal) * 100) : 0;
+          setDownloadProgress({
+            bytesDone: p.bytesDone,
+            bytesTotal: p.bytesTotal,
+            percent,
+            isBackground: e.data.type === 'recomp-background-download-progress',
+          });
+        }
+      } else if (e.data?.type === 'recomp-background-download-complete') {
+        setDownloadCompleted(true);
+        setDownloadProgress(null);
+      }
+    };
+    window.addEventListener('message', handleMsg);
+    return () => window.removeEventListener('message', handleMsg);
+  }, []);
+
+  // Gamepad API Polling
+  const prevGamepadButtonsRef = useRef<{ [key: number]: boolean }>({});
+  const prevGamepadAxesRef = useRef<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    const onGamepadConnected = (e: GamepadEvent) => {
+      setConnectedGamepadName(e.gamepad.id);
+    };
+    const onGamepadDisconnected = () => {
+      const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      const active = Array.from(gps).find((g) => g !== null);
+      setConnectedGamepadName(active ? active.id : null);
+    };
+    window.addEventListener('gamepadconnected', onGamepadConnected);
+    window.addEventListener('gamepaddisconnected', onGamepadDisconnected);
+
+    // Initial check for connected gamepads
+    if (navigator.getGamepads) {
+      const gps = navigator.getGamepads();
+      const active = Array.from(gps).find((g) => g !== null);
+      if (active) setConnectedGamepadName(active.id);
+    }
+
+    let animId: number;
+    const pollGamepad = () => {
+      if (navigator.getGamepads) {
+        const gamepads = navigator.getGamepads();
+        for (const gp of gamepads) {
+          if (!gp) continue;
+
+          const checkButton = (btnIndex: number, key: string, code: string, keyCode: number) => {
+            const isDown = gp.buttons[btnIndex]?.pressed || (gp.buttons[btnIndex]?.value || 0) > 0.2;
+            const wasDown = !!prevGamepadButtonsRef.current[btnIndex];
+            if (isDown && !wasDown) {
+              handleVirtualKey(key, code, keyCode, 'down');
+              prevGamepadButtonsRef.current[btnIndex] = true;
+            } else if (!isDown && wasDown) {
+              handleVirtualKey(key, code, keyCode, 'up');
+              prevGamepadButtonsRef.current[btnIndex] = false;
+            }
+          };
+
+          // Throttle / RT (Button 7): Gas
+          checkButton(7, 'ArrowUp', 'ArrowUp', 38);
+          // Brake / LT (Button 6): Brake
+          checkButton(6, 'ArrowDown', 'ArrowDown', 40);
+          // A / Cross (Button 0): Nitrous (NOS)
+          checkButton(0, 'ShiftLeft', 'ShiftLeft', 16);
+          // X / Square (Button 2): Handbrake
+          checkButton(2, 'Space', 'Space', 32);
+          // B / Circle (Button 1): Speedbreaker
+          checkButton(1, 'KeyG', 'KeyG', 71);
+          // Y / Triangle (Button 3): Camera
+          checkButton(3, 'KeyC', 'KeyC', 67);
+          // Start / Options (Button 9): Pause / Menu
+          checkButton(9, 'Escape', 'Escape', 27);
+          // Back / Share (Button 8): Reset Car
+          checkButton(8, 'KeyR', 'KeyR', 82);
+          // D-Pad
+          checkButton(12, 'ArrowUp', 'ArrowUp', 38);
+          checkButton(13, 'ArrowDown', 'ArrowDown', 40);
+          checkButton(14, 'ArrowLeft', 'ArrowLeft', 37);
+          checkButton(15, 'ArrowRight', 'ArrowRight', 39);
+
+          // Left Stick Steering (Axis 0)
+          const axisX = gp.axes[0] || 0;
+          const steerLeft = axisX < -0.25;
+          const steerRight = axisX > 0.25;
+
+          if (steerLeft && !prevGamepadAxesRef.current['left']) {
+            handleVirtualKey('ArrowLeft', 'ArrowLeft', 37, 'down');
+            prevGamepadAxesRef.current['left'] = true;
+          } else if (!steerLeft && prevGamepadAxesRef.current['left']) {
+            handleVirtualKey('ArrowLeft', 'ArrowLeft', 37, 'up');
+            prevGamepadAxesRef.current['left'] = false;
+          }
+
+          if (steerRight && !prevGamepadAxesRef.current['right']) {
+            handleVirtualKey('ArrowRight', 'ArrowRight', 39, 'down');
+            prevGamepadAxesRef.current['right'] = true;
+          } else if (!steerRight && prevGamepadAxesRef.current['right']) {
+            handleVirtualKey('ArrowRight', 'ArrowRight', 39, 'up');
+            prevGamepadAxesRef.current['right'] = false;
+          }
+        }
+      }
+      animId = requestAnimationFrame(pollGamepad);
+    };
+
+    animId = requestAnimationFrame(pollGamepad);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('gamepadconnected', onGamepadConnected);
+      window.removeEventListener('gamepaddisconnected', onGamepadDisconnected);
+    };
+  }, [handleVirtualKey]);
+
+  // PC Keyboard Shortcuts & Custom Keybindings Handler
+  useEffect(() => {
+    const customBinds = _settings.keyBindings;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      // Escape key handler: Forward to game, prevent fullscreen exit when permitted
+      if (e.key === 'Escape' || e.code === 'Escape') {
+        triggerPause();
+        if (document.fullscreenElement) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // 'P' as universal pause key
+      if (e.key === 'p' || e.key === 'P') {
+        triggerPause();
+        return;
+      }
+
+      // 'F' for fullscreen toggle
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+        return;
+      }
+
+      // Check against custom keybindings
+      if (customBinds) {
+        if (e.code === customBinds.accelerate) handleVirtualKey('ArrowUp', 'ArrowUp', 38, 'down');
+        if (e.code === customBinds.brake) handleVirtualKey('ArrowDown', 'ArrowDown', 40, 'down');
+        if (e.code === customBinds.steerLeft) handleVirtualKey('ArrowLeft', 'ArrowLeft', 37, 'down');
+        if (e.code === customBinds.steerRight) handleVirtualKey('ArrowRight', 'ArrowRight', 39, 'down');
+        if (e.code === customBinds.nitrous) handleVirtualKey('ShiftLeft', 'ShiftLeft', 16, 'down');
+        if (e.code === customBinds.handbrake) handleVirtualKey('Space', 'Space', 32, 'down');
+        if (e.code === customBinds.speedbreaker) handleVirtualKey('KeyG', 'KeyG', 71, 'down');
+        if (e.code === customBinds.camera) handleVirtualKey('KeyC', 'KeyC', 67, 'down');
+        if (e.code === customBinds.reset) handleVirtualKey('KeyR', 'KeyR', 82, 'down');
+        if (e.code === customBinds.pause) triggerPause();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (customBinds) {
+        if (e.code === customBinds.accelerate) handleVirtualKey('ArrowUp', 'ArrowUp', 38, 'up');
+        if (e.code === customBinds.brake) handleVirtualKey('ArrowDown', 'ArrowDown', 40, 'up');
+        if (e.code === customBinds.steerLeft) handleVirtualKey('ArrowLeft', 'ArrowLeft', 37, 'up');
+        if (e.code === customBinds.steerRight) handleVirtualKey('ArrowRight', 'ArrowRight', 39, 'up');
+        if (e.code === customBinds.nitrous) handleVirtualKey('ShiftLeft', 'ShiftLeft', 16, 'up');
+        if (e.code === customBinds.handbrake) handleVirtualKey('Space', 'Space', 32, 'up');
+        if (e.code === customBinds.speedbreaker) handleVirtualKey('KeyG', 'KeyG', 71, 'up');
+        if (e.code === customBinds.camera) handleVirtualKey('KeyC', 'KeyC', 67, 'up');
+        if (e.code === customBinds.reset) handleVirtualKey('KeyR', 'KeyR', 82, 'up');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [toggleFullscreen, triggerPause, handleVirtualKey, _settings.keyBindings]);
+
+  // Focus iframe on load
   useEffect(() => {
     const focusIframe = () => {
       if (iframeRef.current) {
@@ -171,68 +399,106 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       }
     };
     focusIframe();
-    const timer1 = setTimeout(focusIframe, 300);
-    const timer2 = setTimeout(focusIframe, 1000);
-    const timer3 = setTimeout(focusIframe, 3000);
-
-    const handleWindowKeyDown = (e: KeyboardEvent) => {
-      if (iframeRef.current && iframeRef.current.contentWindow) {
-        if (
-          [
-            'Enter',
-            'Space',
-            'ArrowUp',
-            'ArrowDown',
-            'ArrowLeft',
-            'ArrowRight',
-            'KeyW',
-            'KeyA',
-            'KeyS',
-            'KeyD',
-            'ShiftLeft',
-            'ControlLeft',
-            'Escape',
-          ].includes(e.code)
-        ) {
-          iframeRef.current.focus();
-          iframeRef.current.contentWindow.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleWindowKeyDown);
-
+    const t1 = setTimeout(focusIframe, 300);
+    const t2 = setTimeout(focusIframe, 1000);
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      window.removeEventListener('keydown', handleWindowKeyDown);
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, []);
 
   const openDedicatedTab = () => {
-    window.open('/nfsmw/runtime.html?game=nfsmw&res=1280x720', '_blank');
+    const offlineParam = _settings.offlinePreload ? '&offline=1' : '';
+    window.open(`/nfsmw/runtime.html?game=nfsmw&res=1280x720${offlineParam}`, '_blank');
   };
+
+  const iframeSrc = `/nfsmw/runtime.html?game=nfsmw&res=1280x720${_settings.offlinePreload ? '&offline=1' : ''}`;
 
   return (
     <div className={`nfsmw-game-container ${isPortrait ? 'portrait-mode' : 'landscape-mode'}`}>
       {/* Top Game Controls Toolbar */}
       <div className="nfsmw-toolbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 800, color: '#10b981' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            REAL NFS MOST WANTED (2005) PC WEBGPU
+            REAL NFS MOST WANTED (2005) WEBGPU
           </span>
+
           <span style={{ color: '#475569' }} className="hide-on-mobile">|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }} className="hide-on-mobile">
-            Resolution: <span style={{ color: '#f59e0b', fontWeight: 800 }}>1280×720</span>
-          </span>
-          <span style={{ color: '#475569' }} className="hide-on-mobile">|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }} className="hide-on-mobile">
-            Simulation: <span style={{ color: '#10b981', fontWeight: 800 }}>120 Hz Fixed</span>
-          </span>
+
+          {/* Gamepad Status Badge */}
+          {connectedGamepadName && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                color: '#67e8f9',
+                background: 'rgba(6, 182, 212, 0.15)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+              }}
+              title={connectedGamepadName}
+            >
+              <Gamepad2 size={13} color="#06b6d4" />
+              <span>Controller Active</span>
+            </span>
+          )}
+
+          {/* Background Download Progress Indicator */}
+          {downloadProgress && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.12)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+              }}
+            >
+              <DownloadCloud size={13} color="#f59e0b" />
+              <span>Caching in background: {downloadProgress.percent}% ({(downloadProgress.bytesDone / 1024 ** 2).toFixed(0)} MB)</span>
+            </span>
+          )}
+
+          {downloadCompleted && !downloadProgress && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                color: '#10b981',
+                background: 'rgba(16, 185, 129, 0.12)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              <CheckCircle2 size={13} color="#10b981" />
+              <span>100% Offline Ready (0 Lag)</span>
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Direct Pause / Menu Trigger Button */}
+          <button
+            onClick={triggerPause}
+            className="nfsmw-hud-btn"
+            title="In-Game Pause Menu (Esc or P)"
+            style={{ color: '#f59e0b', borderColor: '#f59e0b', background: 'rgba(245, 158, 11, 0.15)' }}
+          >
+            <Pause size={13} color="#f59e0b" />
+            <span style={{ fontSize: '11px', fontWeight: 800 }}>Menu (Esc)</span>
+          </button>
+
           {/* Touch Controls Toggle Button */}
           <button
             onClick={() => setShowTouchControls(!showTouchControls)}
@@ -263,9 +529,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
           </button>
 
-          <button onClick={toggleFullscreen} className="nfsmw-hud-btn" title="Toggle Fullscreen (F)">
+          <button
+            onClick={toggleFullscreen}
+            className="nfsmw-hud-btn"
+            title="Toggle Fullscreen (F) • Press Esc for In-Game Menu"
+          >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen (F)'}
           </button>
 
           <button
@@ -292,9 +562,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
           <iframe
             ref={iframeRef}
-            src="/nfsmw/runtime.html?game=nfsmw&res=1280x720"
+            src={iframeSrc}
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            allow="cross-origin-isolated; autoplay; fullscreen"
+            allow="cross-origin-isolated; autoplay; fullscreen; keyboard-map *"
           />
         </div>
 
@@ -306,137 +576,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             onUpdateSettings={handleUpdateMobileSettings}
             isPortrait={isPortrait}
           />
-        )}
-
-        {/* Quick Help Banner Overlay */}
-        {showHelpBanner && !isTouchDevice && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '16px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 35,
-              background: 'rgba(10, 14, 22, 0.94)',
-              border: '1px solid rgba(245, 158, 11, 0.8)',
-              borderRadius: '8px',
-              padding: '8px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.8), 0 0 15px rgba(245, 158, 11, 0.2)',
-              pointerEvents: 'auto',
-            }}
-          >
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b' }}>
-              🎮 Click game screen & Press{' '}
-              <kbd style={{ background: '#222', padding: '2px 6px', borderRadius: '4px', border: '1px solid #555', color: '#fff' }}>ENTER</kbd> or{' '}
-              <kbd style={{ background: '#222', padding: '2px 6px', borderRadius: '4px', border: '1px solid #555', color: '#fff' }}>SPACE</kbd> to skip intros & enter Title Screen!
-            </span>
-            <span style={{ fontSize: '11px', color: '#94a3b8' }}>• Arrows / WASD to Drive • Shift for NOS • [F] for Fullscreen</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowHelpBanner(false);
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 800,
-                padding: '0 4px',
-              }}
-              title="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Portrait Mode Hint for Mobile */}
-        {isPortrait && isTouchDevice && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '12px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(15, 23, 42, 0.92)',
-              border: '1px solid rgba(245, 158, 11, 0.6)',
-              borderRadius: '20px',
-              padding: '4px 14px',
-              fontSize: '11px',
-              color: '#f59e0b',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              pointerEvents: 'none',
-              zIndex: 35,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>📱 Tip: Rotate to Landscape for Full-Screen Driving</span>
-          </div>
-        )}
-
-        {/* Telemetry Overlay Panel */}
-        {showTelemetry && (
-          <div className="nfsmw-telemetry-box">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#f59e0b',
-                fontWeight: 800,
-                marginBottom: '8px',
-                paddingBottom: '6px',
-                borderBottom: '1px solid #232b3c',
-              }}
-            >
-              <Zap size={14} />
-              <span>AUTHENTIC NFSMW (2005) TELEMETRY</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Executable:</span>
-                <span style={{ color: '#fff', fontWeight: 700 }}>speed.exe (AOT Recompiled)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Graphics Engine:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>Direct3D 9 on WebGPU Metal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Adapter:</span>
-                <span style={{ color: '#cbd5e1', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {webGpuAdapterName || 'Apple M-Series Metal'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Resolution:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>1280×720 (Widescreen)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Physics:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>120 Hz Fixed Step</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Audio Engine:</span>
-                <span style={{ color: '#60a5fa' }}>AudioWorklet PCM (48 kHz Stereo)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Active Mods:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{mods.filter((m) => m.enabled).length} Injected</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Controls:</span>
-                <span style={{ color: '#cbd5e1' }}>Keyboard / Gamepad / Touch Gyro</span>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

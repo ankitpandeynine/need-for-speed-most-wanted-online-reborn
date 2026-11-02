@@ -1,154 +1,195 @@
-# Need for Speed: Most Wanted (2005) — 100% Free Web Hosting & Asset Streaming Guide
+# Need for Speed: Most Wanted (2005) — Complete Deployment, Cloud Hosting & Zero-Lag Guide
 
-This guide provides step-by-step instructions on how to host and run **Need for Speed: Most Wanted (2005) Reborn** on the web **completely for free ($0 cost)** for you and your players, with full mobile touch/gyroscope support and desktop controls.
+This document gives you the **exact, production-ready methods** to host **Need for Speed: Most Wanted (2005) Reborn** on **Vercel** and **GitHub Pages**, host the 1.4 GB game assets on the cloud for **$0 cost**, eliminate in-race network lag with OPFS pre-downloading, and connect PC gamepads and keyboard bindings.
 
 ---
 
-## Architecture Overview & Zero-Cost Strategy
+## Architecture Summary ($0 Forever Plan)
 
-| Component | Size | Free Hosting Solution | Cost |
+| Resource | Size | Recommended Solution | Monthly Cost |
 | :--- | :--- | :--- | :--- |
-| **Frontend Launcher & WebGPU Engine** | ~78 MB | **GitHub Pages** or **Vercel** | **$0 / month** |
-| **Cross-Origin Isolation (COOP/COEP)** | Embedded | `coi-serviceworker.js` or `vercel.json` | **$0 / month** |
-| **Game Asset Files (`CARS`, `GLOBAL`, etc.)** | ~1.4 GB | **Local OPFS Import**, **Cloudflare R2**, or **GitHub Releases** | **$0 / month** |
+| **Web App Frontend & WebGPU Engine** | ~78 MB | **Vercel** or **GitHub Pages** | **$0.00** |
+| **Security Headers (COOP / COEP)** | Embedded | `vercel.json` or `coi-serviceworker.js` | **$0.00** |
+| **Cloud Game Assets (`CARS`, `TRACKS`, etc.)** | ~1.4 GB | **Cloudflare R2** or **GitHub Releases** | **$0.00** (0 Egress Fees) |
+| **Offline Player Storage** | ~1.4 GB | **Browser OPFS (Origin Private File System)** | **$0.00** (Local Device Disk) |
 
 ---
 
-## Method 1: Instant Local OPFS Import (Zero Cloud Storage Needed)
+## METHOD 1: Deploy on Vercel + Cloud Game Asset Hosting ($0 Cost)
 
-The simplest, fastest, and most private way to run the full game with authentic graphics, textures, and music is to import your existing retail copy into your browser's persistent storage (**Origin Private File System**).
+Vercel is the recommended hosting platform because it supports native edge HTTP headers (`Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy`), giving instant WebAssembly SharedArrayBuffer and WebGPU acceleration on initial page load.
 
-### How It Works:
-1. Open the website (e.g. `http://localhost:3000` or your deployed web address).
-2. Go to the **Game Assets** tab in the navigation bar.
-3. Click **"Import Game Folder"** (supported on Chrome, Brave, Edge, and Android Chrome).
-4. Select your local game folder (e.g., `Need For Speed Most Wanted Black Edition`).
-5. The browser will automatically scan and copy `speed.exe`, `CARS/`, `FRONTEND/`, `GLOBAL/`, `SOUND/`, and `TRACKS/` into the sandboxed OPFS storage.
-6. Once completed (takes ~15-30 seconds), click **"START ENGINE / PLAY NOW"**.
-7. The game runs **100% locally and offline** at full speed with zero server bandwidth consumed!
+### Part A: Host the 1.4 GB Game Assets on Cloudflare R2 ($0 Cost, 0 Egress)
+
+> [!NOTE]
+> Standard cloud providers (like AWS S3 or Google Cloud) charge **$0.09 per GB of egress bandwidth**, meaning if 1,000 players download your 1.4 GB game, AWS would bill you \$126.  
+> **Cloudflare R2 provides 10 GB of storage free forever with $0.00 egress fees**, meaning unlimited players can download the game without you paying a single cent.
+
+#### Step 1: Create a Cloudflare R2 Bucket
+1. Sign up for a free account at [Cloudflare Dashboard](https://dash.cloudflare.com/).
+2. In the sidebar, click **R2 Object Storage**.
+3. Click **Create bucket** and enter a name (e.g. `nfsmw-assets`).
+4. Select location: **Automatic** (or closest to your players). Click **Create Bucket**.
+
+#### Step 2: Enable Public Access & CORS
+1. In your bucket page, click the **Settings** tab.
+2. Scroll to **Public Access** and click **Connect Domain** (or enable **R2.dev subdomain** for a free instant URL like `https://pub-abcdef123456.r2.dev`).
+3. Scroll down to **CORS Policy** and click **Add CORS Policy**. Paste the following JSON:
+   ```json
+   [
+     {
+       "AllowedOrigins": ["*"],
+       "AllowedMethods": ["GET", "HEAD"],
+       "AllowedHeaders": ["*"],
+       "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+       "MaxAgeSeconds": 86400
+     }
+   ]
+   ```
+4. Click **Save CORS policy**.
+
+#### Step 3: Upload the Game Asset Pack to R2
+Upload the contents of your Need for Speed: Most Wanted retail directory:
+- `assets.json` (the file index generated in `mw-browser/public/nfsmw/assets.json`)
+- `speed.exe`
+- `00000000.256`
+- `CARS/`
+- `FRONTEND/`
+- `GLOBAL/`
+- `SOUND/`
+- `TRACKS/`
+
+You can drag-and-drop files directly in the Cloudflare R2 web dashboard, or use the high-speed AWS S3 CLI / `rclone`:
+```bash
+aws s3 sync "/Users/ankit/Downloads/ga/Need For Speed Most Wanted Black Edition" s3://nfsmw-assets \
+  --endpoint-url https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+```
+
+#### Step 4: Link Your R2 URL in `games.json`
+Open [`mw-browser/public/games.json`](file:///Users/ankit/projects/mac-software/windows/needforspeedmw/mw-browser/public/games.json) and set your public R2 URL:
+```json
+{
+  "id": "nfsmw",
+  "title": "Need for Speed: Most Wanted",
+  "executable": "speed.exe",
+  "hostedAssets": "./nfsmw/assets.json",
+  "assetBase": "https://pub-abcdef123456.r2.dev"
+}
+```
 
 ---
 
-## Method 2: Hosting the Website for Free on Vercel (Recommended)
+### Part B: Deploy the Web Application on Vercel
 
-Vercel provides the fastest edge hosting with native HTTP headers for WebAssembly SharedArrayBuffer and WebGPU.
-
-### Steps:
 1. Push your repository to GitHub:
    ```bash
    git push origin main
    ```
-2. Open [Vercel](https://vercel.com) and sign in with your GitHub account.
-3. Click **"Add New..."** → **"Project"**.
-4. Select your repository: `ankitpandeynine/need-for-speed-most-wanted-online-reborn`.
-5. Vercel will automatically detect the configuration in `vercel.json`:
-   - **Framework Preset**: Other / Vite
+2. Log in to [Vercel](https://vercel.com) using your GitHub account.
+3. Click **Add New...** → **Project**.
+4. Import your repository: `ankitpandeynine/need-for-speed-most-wanted-online-reborn`.
+5. Vercel automatically detects the included [`vercel.json`](file:///Users/ankit/projects/mac-software/windows/needforspeedmw/vercel.json):
    - **Build Command**: `cd mw-browser && npm install && npm run build`
    - **Output Directory**: `mw-browser/dist`
-6. Click **Deploy**.
-7. In ~45 seconds, your site is live with a free SSL domain (e.g. `https://your-nfsmw.vercel.app`).
-8. The included `vercel.json` already provides the necessary security headers:
-   - `Cross-Origin-Opener-Policy: same-origin`
-   - `Cross-Origin-Embedder-Policy: require-corp`
-   - `Cross-Origin-Resource-Policy: cross-origin`
+   - **Headers**: Configured with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`.
+6. Click **Deploy**. In ~45 seconds, your game is live globally at `https://your-project.vercel.app`!
 
 ---
 
-## Method 3: Hosting the Website for Free on GitHub Pages
+## METHOD 2: Deploy for Free on GitHub Pages ($0 Cost)
 
-GitHub Pages gives you unlimited free hosting directly from your GitHub repository.
+GitHub Pages provides unlimited free static hosting directly from your GitHub repository.
 
-### Steps:
+### Step 1: Enable GitHub Pages with GitHub Actions
 1. Go to your repository on GitHub:
    `https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn`
-2. Navigate to **Settings** → **Pages** (in the left sidebar).
-3. Under **Build and deployment** → **Source**, select:
+2. Click **Settings** → **Pages** (in the left sidebar).
+3. Under **Build and deployment** → **Source**, change from "Deploy from a branch" to:
    👉 **GitHub Actions**
-4. Push any commit to the `main` branch.
-5. GitHub will automatically run the included workflow (`.github/workflows/deploy.yml`):
-   - It builds `@nfsmw/mod-platform` and runs test suites.
-   - It builds `@nfsmw/browser` with Vite.
-   - It deploys the `mw-browser/dist` directory to your GitHub Pages URL:
-     `https://ankitpandeynine.github.io/need-for-speed-most-wanted-online-reborn/`
-6. **Cross-Origin Isolation on GitHub Pages**:
-   - Because standard GitHub Pages does not allow custom HTTP response headers, this project includes `coi-serviceworker.js`.
-   - On the first visit, the service worker automatically registers, intercepts requests to add COOP/COEP headers, and reloads once. WebAssembly, WebGPU, and SharedArrayBuffer work immediately!
+
+### Step 2: Push to Trigger the Deployment Workflow
+The repository already includes [`.github/workflows/deploy.yml`](file:///Users/ankit/projects/mac-software/windows/needforspeedmw/.github/workflows/deploy.yml). When you push to `main`:
+1. GitHub Actions automatically installs Node.js 20.
+2. It builds `@nfsmw/mod-platform` and tests all EA chunk parsers.
+3. It builds `@nfsmw/browser` with Vite.
+4. It publishes `mw-browser/dist` to GitHub Pages at:
+   `https://ankitpandeynine.github.io/need-for-speed-most-wanted-online-reborn/`
+
+### Step 3: How Cross-Origin Isolation Works on GitHub Pages
+Standard GitHub Pages does not allow custom response headers.  
+This project includes [`mw-browser/public/coi-serviceworker.js`](file:///Users/ankit/projects/mac-software/windows/needforspeedmw/mw-browser/public/coi-serviceworker.js). On the user's first visit, the service worker registers in ~50ms, intercepts outgoing requests to inject COOP/COEP headers, and reloads once. WebAssembly, WebGPU, and SharedArrayBuffer work immediately at $0 cost!
 
 ---
 
-## Method 4: Hosting Game Assets on Cloudflare R2 ($0 Cost, 0 Egress Fees)
+## Eliminating Low-Network Lag: Pre-Downloading Maps & Offline Mode
 
-If you want players to download or stream the authentic 1.4 GB game files without needing them to supply their own local folder, Cloudflare R2 is the optimal zero-cost cloud storage.
+When playing over slow, jittery, or mobile internet, streaming tracks on-the-fly over HTTP can cause frame drops and pauses. The engine provides three solutions:
 
-### Why Cloudflare R2?
-- **10 GB Storage Free Forever** (NFSMW is only 1.4 GB).
-- **$0 Bandwidth / Egress Fees**: Unlike AWS S3 or Google Cloud (which charge $0.09/GB on egress), Cloudflare R2 charges **$0.00 for egress bandwidth**, meaning thousands of users can download the game without you paying a single cent.
+### 1. "0-Lag Offline Launch" (Pre-Download Before Playing)
+- On the **Play Dashboard** or **Game Assets** tab, click **"0-Lag Offline Launch"** or **"Pre-Download Full Game (1.4 GB) to OPFS"**.
+- The browser downloads all tracks, cars, sounds, and textures up front into the browser's persistent **Origin Private File System (OPFS)**.
+- Once downloaded, the game runs **100% locally from your device disk** with zero internet requests and zero lag!
 
-### Steps to Set Up Cloudflare R2:
-1. Sign up for a free account at [Cloudflare](https://dash.cloudflare.com/).
-2. In the dashboard sidebar, select **R2 Object Storage**.
-3. Click **"Create bucket"** and name it (e.g. `nfsmw-assets`).
-4. Under bucket **Settings**:
-   - Set **Public Development URL** to **Enabled** (or connect a custom domain like `assets.yourdomain.com`).
-   - Add a **CORS Policy** to allow browser requests:
-     ```json
-     [
-       {
-         "AllowedOrigins": ["*"],
-         "AllowedMethods": ["GET", "HEAD"],
-         "AllowedHeaders": ["*"],
-         "MaxAgeSeconds": 86400
-       }
-     ]
-     ```
-5. Upload your game files:
-   - Upload `assets.json` and the game folders (`CARS`, `FRONTEND`, `GLOBAL`, `SOUND`, `TRACKS`, `speed.exe`).
-   - You can upload using the web drag-and-drop or with the `rclone` / `aws s3` CLI.
-6. Update `mw-browser/public/games.json`:
-   ```json
-   {
-     "hostedAssets": "./nfsmw/assets.json",
-     "assetBase": "https://pub-xxxxxx.r2.dev"
-   }
-   ```
-7. Rebuild and push to GitHub. Every player visiting your site will now stream and cache the authentic game directly from R2 at maximum speed with zero hosting bills!
+### 2. Automatic Background Asset Downloader
+- If a player chooses "Start Engine / Play Now" immediately, the game starts with on-demand streaming.
+- While the player drives around the starting district, an automatic **Background Web Worker** continuously downloads and commits all remaining tracks and cars into OPFS in the background!
+- You can monitor the progress bar directly in the top HUD toolbar:  
+  `⚡ Caching in background: 54% (750 MB / 1.4 GB)`.
+- As soon as a file is cached in OPFS, the game engine reads it from local storage, eliminating subsequent streaming delays.
+
+### 3. Instant Local Folder Import (Zero Cloud Hosting Needed)
+- If you or your players already have the retail game files on your Mac or PC:
+  1. Open the website.
+  2. Click the **Game Assets** tab.
+  3. Click **"Select Local Game Folder"**.
+  4. Select your `Need For Speed Most Wanted Black Edition` folder.
+  5. The browser indexes the files into OPFS in ~15 seconds. You can now launch and play the entire game 100% offline without uploading or downloading anything!
 
 ---
 
-## Pre-Configured Global Mirror (Works Out-Of-The-Box)
+## Hardware Input: Keybindings, Gamepads & ESC Key
 
-The repository's `games.json` is already configured with an active fallback CDN mirror:
-```json
-"assetBase": "https://cdn.justplayweb.com/nfsmw-pc13-20261010"
-```
-When a player opens the site, the browser first checks their local OPFS storage. If the game has not been imported yet, it automatically streams required files from this CDN and persists them in OPFS so subsequent launches are instantaneous.
+### 1. Escape Key in Fullscreen (Fixed)
+- In standard web browsers, pressing `Escape` in fullscreen causes the browser to exit fullscreen mode.
+- We utilize the modern **W3C Keyboard Lock API** (`navigator.keyboard.lock(['Escape'])`) when fullscreen is enabled.
+- Pressing `Escape` opens the authentic **Need for Speed: Most Wanted in-game pause/options menu** without exiting fullscreen!
+- You can also press **`P`** or click the **"Menu (Esc)"** button on the HUD toolbar.
+- To exit fullscreen, press **`F`** or click "Exit Fullscreen".
+
+### 2. PC Keyboard Keybindings
+- In the **Controls & Hardware** tab, you can customize every in-game action:
+  - **Accelerate (Gas)**: Up Arrow / W
+  - **Brake / Reverse**: Down Arrow / S
+  - **Steer Left / Right**: Left / Right / A, D
+  - **Nitrous (NOS)**: Left Shift / X
+  - **Handbrake**: Spacebar
+  - **Speedbreaker**: G Key
+  - **Camera**: C Key
+  - **Reset Car**: R Key
+  - **Pause**: Escape / P
+- Click any action in the table to rebind to your preferred key. Binds are saved in your browser's `localStorage`.
+
+### 3. Controller & Gamepad Connectivity
+- Supports all standard USB and Bluetooth gamepads (Xbox Series/One, PlayStation DualSense/DualShock, Nintendo Switch Pro, generic PC controllers):
+  - **Right Trigger (RT / R2)**: Accelerate (Gas)
+  - **Left Trigger (LT / L2)**: Brake / Reverse
+  - **Left Stick**: Smooth 360° Steering
+  - **Button A / Cross**: Nitrous (NOS Boost)
+  - **Button X / Square**: Handbrake (Drift Initiation)
+  - **Button B / Circle**: Speedbreaker
+  - **Button Y / Triangle**: Switch Camera
+  - **Start / Options**: In-Game Pause Menu (Escape)
+  - **Back / Share**: Reset Car
 
 ---
 
-## Mobile Touch & Gyroscope Controls Guide
+## Online Multiplayer Rooms
 
-The application includes native touch and motion sensors designed specifically for smartphones:
-
-### Touch Pedals & Controls:
-- **Gas / Front Key**: Accelerate (`ArrowUp`)
-- **Brake / Back Key**: Reverse / Decelerate (`ArrowDown`)
-- **Steer Left**: Steer Left (`ArrowLeft`)
-- **Steer Right**: Steer Right (`ArrowRight`)
-- **NOS Boost**: Nitrous oxide propulsion (`ShiftLeft` / `KeyX`)
-- **E-Brake**: Handbrake drift initiation (`Space`)
-- **Speedbreaker**: Bullet-time slow motion (`KeyG`)
-- **Camera (C)**: Switch driving perspective
-- **Reset (R)**: Reset car back onto the track
-- **Pause / Menu**: Return to in-game options (`Escape`)
-
-### Gyroscope Tilt Steering:
-- Turn on **"Gyroscope Tilt Steering"** in the **Mobile & Controls** tab or in the in-game quick drawer.
-- On iPhone (iOS), tap **"Enable Device Motion / Gyro"** to grant permission.
-- Hold your phone in landscape mode and tilt left or right to steer smoothly.
-- Customize **Sensitivity** (0.5x to 3.0x) and **Deadzone** (1° to 10°) to match your driving style.
-- Use the **"Calibrate Zero"** button anytime to set your comfortable resting angle.
-
-### Adaptive Orientation:
-- **Landscape Mode**: Full-screen edge-to-edge game display with ergonomic translucent thumb pads on the left and right.
-- **Portrait Mode**: 16:9 widescreen display at the top with a dedicated console-style gamepad deck at the bottom.
-- **Customization**: Adjust button size (80%–150%), opacity (20%–100%), and swap sides for left-handed drivers.
+1. Click the **Multiplayer** tab in the navigation bar.
+2. **Create Room**: Choose a room name, track (Rosewood, Camden Turnpike, Downtown Rockport, Ocean Drive), game mode (Sprint, Circuit, Pursuit Tag), and max players. You will receive a unique 6-character room code (e.g. `ROCK99`).
+3. **Join Room**: Enter any room code to enter the lobby.
+4. **Lobby Features**:
+   - Live connected player list with ping indicator, driver callsign, and car model.
+   - Real-time in-lobby chat with pre-baked police radio taunts.
+   - P2P WebRTC mesh and BroadcastChannel telemetry synchronization.
+5. Click **"Start Race"** to launch into the room grid!
