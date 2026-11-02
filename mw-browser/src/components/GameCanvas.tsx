@@ -658,14 +658,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           top: isFullscreen ? 0 : undefined,
           left: isFullscreen ? 0 : undefined,
           width: isFullscreen ? '100vw' : '100%',
-          height: isFullscreen ? '100vh' : '75vh',
+          height: isFullscreen ? '100vh' : 'calc(100vh - 170px)',
+          minHeight: isFullscreen ? '100vh' : '520px',
+          maxHeight: isFullscreen ? '100vh' : '820px',
           zIndex: isFullscreen ? 99999 : 10,
           backgroundColor: '#000',
           borderRadius: isFullscreen ? 0 : '12px',
           overflow: 'hidden',
           boxShadow: isFullscreen ? 'none' : '0 24px 48px rgba(0, 0, 0, 0.9)',
           border: isFullscreen ? 'none' : '1px solid #273042',
-          minHeight: isFullscreen ? '100vh' : '640px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         {/* Floating Quick Fullscreen Toggle */}
