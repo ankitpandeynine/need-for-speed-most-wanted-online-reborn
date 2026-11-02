@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { GameSettings, ModItem } from '../types';
-import { Square, Zap, Eye, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
+import { GameSettings, ModItem, MobileControlSettings } from '../types';
+import { Square, Zap, Eye, Maximize2, Minimize2, ExternalLink, Smartphone } from 'lucide-react';
+import { TouchControls } from './TouchControls';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -25,6 +26,61 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const [showHelpBanner, setShowHelpBanner] = useState<boolean>(true);
   const [showTelemetry, setShowTelemetry] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Mobile detection & Touch Controls State
+  const isTouchDevice =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(pointer: coarse)').matches ||
+      navigator.maxTouchPoints > 0 ||
+      window.innerWidth <= 1024);
+
+  const [showTouchControls, setShowTouchControls] = useState<boolean>(isTouchDevice);
+  const [isPortrait, setIsPortrait] = useState<boolean>(
+    typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+  );
+
+  const [mobileSettings, setMobileSettings] = useState<MobileControlSettings>(() => {
+    try {
+      const saved = localStorage.getItem('nfsmw_mobile_controls');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return (
+      _settings?.mobileControls || {
+        enabled: true,
+        layout: 'split',
+        buttonScale: 1.0,
+        opacity: 0.85,
+        swapHands: false,
+        haptics: true,
+        gyroEnabled: false,
+        gyroSensitivity: 1.5,
+        gyroDeadzone: 3,
+      }
+    );
+  });
+
+  const handleUpdateMobileSettings = (newSettings: Partial<MobileControlSettings>) => {
+    setMobileSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem('nfsmw_mobile_controls', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Track window resize & orientation
+  useEffect(() => {
+    const handleResize = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
 
   // Track Fullscreen state
   useEffect(() => {
@@ -53,7 +109,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   }, []);
 
-  // Keyboard shortcut: F for fullscreen, Escape to exit
+  // Keyboard shortcut: F for fullscreen
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'f' || e.key === 'F') {
@@ -66,6 +122,45 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleFullscreen]);
+
+  // Dispatch virtual key press to the iframe runtime
+  const handleVirtualKey = useCallback(
+    (key: string, code: string, keyCode: number, action: 'down' | 'up') => {
+      if (!iframeRef.current) return;
+      // 1. Post message to the iframe worker/window
+      iframeRef.current.contentWindow?.postMessage(
+        {
+          type: 'recomp-virtual-key',
+          key,
+          code,
+          keyCode,
+          action,
+        },
+        '*'
+      );
+
+      // 2. Direct DOM event dispatch if accessible
+      try {
+        const doc = iframeRef.current.contentDocument;
+        if (doc) {
+          const canvas = doc.getElementById('canvas');
+          const evt = new KeyboardEvent(action === 'up' ? 'keyup' : 'keydown', {
+            key,
+            code,
+            keyCode,
+            which: keyCode,
+            bubbles: true,
+            cancelable: true,
+          });
+          canvas?.dispatchEvent(evt);
+          doc.dispatchEvent(evt);
+        }
+      } catch {
+        // PostMessage handles isolated cases
+      }
+    },
+    []
+  );
 
   // Automatically focus the real game iframe on load and on click
   useEffect(() => {
@@ -83,9 +178,21 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const handleWindowKeyDown = (e: KeyboardEvent) => {
       if (iframeRef.current && iframeRef.current.contentWindow) {
         if (
-          ['Enter', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ControlLeft', 'Escape'].includes(
-            e.code
-          )
+          [
+            'Enter',
+            'Space',
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'KeyW',
+            'KeyA',
+            'KeyS',
+            'KeyD',
+            'ShiftLeft',
+            'ControlLeft',
+            'Escape',
+          ].includes(e.code)
         ) {
           iframeRef.current.focus();
           iframeRef.current.contentWindow.focus();
@@ -107,7 +214,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   };
 
   return (
-    <div className="nfsmw-game-container">
+    <div className={`nfsmw-game-container ${isPortrait ? 'portrait-mode' : 'landscape-mode'}`}>
       {/* Top Game Controls Toolbar */}
       <div className="nfsmw-toolbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -115,20 +222,35 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
             REAL NFS MOST WANTED (2005) PC WEBGPU
           </span>
-          <span style={{ color: '#475569' }}>|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+          <span style={{ color: '#475569' }} className="hide-on-mobile">|</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }} className="hide-on-mobile">
             Resolution: <span style={{ color: '#f59e0b', fontWeight: 800 }}>1280×720</span>
           </span>
-          <span style={{ color: '#475569' }}>|</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+          <span style={{ color: '#475569' }} className="hide-on-mobile">|</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }} className="hide-on-mobile">
             Simulation: <span style={{ color: '#10b981', fontWeight: 800 }}>120 Hz Fixed</span>
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Touch Controls Toggle Button */}
+          <button
+            onClick={() => setShowTouchControls(!showTouchControls)}
+            className="nfsmw-hud-btn"
+            title="Toggle On-Screen Mobile Touch Controls"
+            style={{
+              color: showTouchControls ? '#f59e0b' : '#94a3b8',
+              borderColor: showTouchControls ? '#f59e0b' : '#273042',
+              background: showTouchControls ? 'rgba(245, 158, 11, 0.15)' : 'rgba(18, 22, 32, 0.85)',
+            }}
+          >
+            <Smartphone size={14} color={showTouchControls ? '#f59e0b' : 'currentColor'} />
+            <span style={{ fontSize: '11px', fontWeight: 700 }}>Touch Controls</span>
+          </button>
+
           <button
             onClick={openDedicatedTab}
-            className="nfsmw-hud-btn"
+            className="nfsmw-hud-btn hide-on-mobile"
             title="Open real Need for Speed: Most Wanted in a full dedicated browser window"
             style={{ color: '#60a5fa', borderColor: '#2563eb' }}
           >
@@ -136,14 +258,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             Dedicated Tab
           </button>
 
-          <button onClick={() => setShowTelemetry(!showTelemetry)} className="nfsmw-hud-btn">
+          <button onClick={() => setShowTelemetry(!showTelemetry)} className="nfsmw-hud-btn hide-on-mobile">
             <Eye size={14} />
             {showTelemetry ? 'Hide Telemetry' : 'Show Telemetry'}
           </button>
 
           <button onClick={toggleFullscreen} className="nfsmw-hud-btn" title="Toggle Fullscreen (F)">
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen (F)'}
+            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           </button>
 
           <button
@@ -152,7 +274,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             style={{ background: 'rgba(153, 27, 27, 0.5)', borderColor: '#dc2626', color: '#fecaca' }}
           >
             <Square size={14} />
-            Quit Game
+            Quit
           </button>
         </div>
       </div>
@@ -176,8 +298,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           />
         </div>
 
+        {/* Mobile On-Screen Touch Controls Overlay */}
+        {showTouchControls && mobileSettings.enabled && (
+          <TouchControls
+            onVirtualKey={handleVirtualKey}
+            settings={mobileSettings}
+            onUpdateSettings={handleUpdateMobileSettings}
+            isPortrait={isPortrait}
+          />
+        )}
+
         {/* Quick Help Banner Overlay */}
-        {showHelpBanner && (
+        {showHelpBanner && !isTouchDevice && (
           <div
             style={{
               position: 'absolute',
@@ -220,6 +352,33 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             >
               ✕
             </button>
+          </div>
+        )}
+
+        {/* Portrait Mode Hint for Mobile */}
+        {isPortrait && isTouchDevice && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(15, 23, 42, 0.92)',
+              border: '1px solid rgba(245, 158, 11, 0.6)',
+              borderRadius: '20px',
+              padding: '4px 14px',
+              fontSize: '11px',
+              color: '#f59e0b',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              pointerEvents: 'none',
+              zIndex: 35,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span>📱 Tip: Rotate to Landscape for Full-Screen Driving</span>
           </div>
         )}
 
@@ -274,7 +433,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Controls:</span>
-                <span style={{ color: '#cbd5e1' }}>Keyboard / Gamepad (Native)</span>
+                <span style={{ color: '#cbd5e1' }}>Keyboard / Gamepad / Touch Gyro</span>
               </div>
             </div>
           </div>

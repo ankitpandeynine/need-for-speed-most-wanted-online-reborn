@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { ViewTab, GameSettings, ModItem, StorageStatus } from './types';
+import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { BlacklistView } from './components/BlacklistView';
-import { WorldMapView } from './components/WorldMapView';
-import { GarageView } from './components/GarageView';
-import { EATraxView } from './components/EATraxView';
-import { MultiplayerView } from './components/MultiplayerView';
-import { ModManagerView } from './components/ModManagerView';
+import { ControlsView } from './components/ControlsView';
 import { StorageManagerView } from './components/StorageManagerView';
 import { SettingsModal } from './components/SettingsModal';
 import { GameCanvas } from './components/GameCanvas';
 import { GameRuntimeService } from './services/gameRuntime';
 import { ModManagerService } from './services/modManager';
 import { BrowserStorageService } from './services/storage';
+
+const DEFAULT_MOBILE_SETTINGS: MobileControlSettings = {
+  enabled: true,
+  layout: 'split',
+  buttonScale: 1.0,
+  opacity: 0.85,
+  swapHands: false,
+  haptics: true,
+  gyroEnabled: false,
+  gyroSensitivity: 1.5,
+  gyroDeadzone: 3,
+};
 
 const DEFAULT_SETTINGS: GameSettings = {
   resolution: '720p',
@@ -27,7 +34,8 @@ const DEFAULT_SETTINGS: GameSettings = {
   reflections: 'high',
   audioVolume: 80,
   musicVolume: 75,
-  controllerLayout: 'xbox',
+  controllerLayout: 'keyboard_arrows',
+  mobileControls: DEFAULT_MOBILE_SETTINGS,
 };
 
 export const App: React.FC = () => {
@@ -37,10 +45,8 @@ export const App: React.FC = () => {
   const [webGpuAdapterName, setWebGpuAdapterName] = useState<string | undefined>();
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
   const [mods, setMods] = useState<ModItem[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('bmw-m3-gtr');
-  const [activeEventTitle, setActiveEventTitle] = useState<string | undefined>();
   const [storage, setStorage] = useState<StorageStatus>({
-    hasSpeedExe: true, // Default to ready for presentation
+    hasSpeedExe: true,
     speedExeValid: true,
     totalGameFiles: 1406,
     storageQuotaBytes: 100 * 1024 * 1024 * 1024,
@@ -59,7 +65,7 @@ export const App: React.FC = () => {
       setWebGpuAdapterName(res.adapterName);
     });
 
-    // Load initial mods and storage
+    // Load initial storage & mods
     setMods(modManager.getMods());
     storageService.getStorageStatus().then(setStorage);
 
@@ -83,34 +89,18 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleToggleMod = (id: string) => {
-    modManager.toggleMod(id);
-    setMods(modManager.getMods());
-  };
-
-  const handleUpdatePriority = (id: string, newPriority: number) => {
-    modManager.updatePriority(id, newPriority);
-    setMods(modManager.getMods());
-  };
-
-  const handleInstallMod = (file: File) => {
-    const newMod: ModItem = {
-      id: file.name.replace(/\.(mwmod|zip)$/, '').toLowerCase(),
-      name: file.name.replace(/\.(mwmod|zip)$/, ''),
-      version: '1.0.0',
-      author: 'Custom User Mod',
-      description: 'Imported from local archive file.',
-      type: 'texture',
-      enabled: true,
-      priority: 60,
-      assetsCount: 4,
-    };
-    modManager.registerMod(newMod);
-    setMods(modManager.getMods());
-  };
-
   const handleUpdateSettings = (newPartial: Partial<GameSettings>) => {
     setSettings((prev) => ({ ...prev, ...newPartial }));
+  };
+
+  const handleUpdateMobileSettings = (newPartial: Partial<MobileControlSettings>) => {
+    setSettings((prev) => ({
+      ...prev,
+      mobileControls: {
+        ...prev.mobileControls,
+        ...newPartial,
+      },
+    }));
   };
 
   return (
@@ -138,8 +128,6 @@ export const App: React.FC = () => {
             mods={mods}
             onStopGame={() => runtime.stopSession()}
             webGpuAdapterName={webGpuAdapterName}
-            initialVehicle={selectedVehicle}
-            initialEventTitle={activeEventTitle}
           />
         )}
 
@@ -148,73 +136,25 @@ export const App: React.FC = () => {
             onStartGame={handleToggleGame}
             settings={settings}
             storage={storage}
-            mods={mods}
-            onOpenMods={() => setCurrentTab('mods')}
+            onOpenControls={() => setCurrentTab('controls')}
+            onOpenSettings={() => setCurrentTab('settings')}
             onOpenStorage={() => setCurrentTab('storage')}
-            onOpenMultiplayer={() => setCurrentTab('multiplayer')}
-            onOpenBlacklist={() => setCurrentTab('blacklist')}
-            onOpenMap={() => setCurrentTab('map')}
-            onOpenGarage={() => setCurrentTab('garage')}
-            onOpenEATrax={() => setCurrentTab('eatrax')}
             webGpuName={webGpuAdapterName}
           />
         )}
 
-        {currentTab === 'blacklist' && (
-          <BlacklistView
-            onLaunchEvent={(event, rival) => {
-              setActiveEventTitle(`${event.title} • Rival: #${rival.rank} ${rival.alias}`);
-              runtime.startSession();
-              setCurrentTab('game');
-            }}
+        {currentTab === 'controls' && (
+          <ControlsView
+            settings={settings.mobileControls}
+            onUpdateSettings={handleUpdateMobileSettings}
+            onLaunchGame={handleToggleGame}
           />
         )}
 
-        {currentTab === 'map' && (
-          <WorldMapView
-            onStartDriveAt={(location) => {
-              setActiveEventTitle(`Rockport GPS • ${location.district}: ${location.title}`);
-              runtime.startSession();
-              setCurrentTab('game');
-            }}
-          />
-        )}
-
-        {currentTab === 'garage' && (
-          <GarageView
-            selectedVehicleId={selectedVehicle}
-            onSelectVehicle={(id) => setSelectedVehicle(id)}
-            onLaunchDrive={(carId) => {
-              setSelectedVehicle(carId);
-              setActiveEventTitle('Free Roam • Rockport Highway 99');
-              runtime.startSession();
-              setCurrentTab('game');
-            }}
-          />
-        )}
-
-        {currentTab === 'eatrax' && <EATraxView />}
-
-        {currentTab === 'multiplayer' && (
-          <MultiplayerView
-            onStartOnlineRace={() => {
-              setActiveEventTitle('Online Multiplayer Grid Match');
-              runtime.startSession();
-              setCurrentTab('game');
-            }}
-          />
-        )}
-
-        {currentTab === 'mods' && (
-          <ModManagerView
-            mods={mods}
-            onToggleMod={handleToggleMod}
-            onUpdatePriority={handleUpdatePriority}
-            onInstallMod={handleInstallMod}
-            onResetDefaults={() => {
-              modManager.resetToPopularDefaults();
-              setMods(modManager.getMods());
-            }}
+        {currentTab === 'settings' && (
+          <SettingsModal
+            settings={settings}
+            onUpdateSettings={handleUpdateSettings}
           />
         )}
 
@@ -234,13 +174,6 @@ export const App: React.FC = () => {
               storageService.markInstalled(count);
               setStorage((s) => ({ ...s, hasSpeedExe: true, speedExeValid: true, totalGameFiles: count }));
             }}
-          />
-        )}
-
-        {currentTab === 'settings' && (
-          <SettingsModal
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
           />
         )}
       </main>

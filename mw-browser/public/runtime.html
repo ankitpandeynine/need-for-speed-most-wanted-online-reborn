@@ -9,6 +9,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Need for Speed: Most Wanted</title>
+<script src="/coi-serviceworker.js"></script>
 <style>
   html, body { margin: 0; height: 100%; background: #000; color: #ddd; font: 14px system-ui, sans-serif; overflow: hidden; }
   #canvas { display: block; width: 100vw; height: 100vh; outline: none; }
@@ -359,6 +360,27 @@ async function start() {
 
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("click", () => canvas.focus());
+canvas.addEventListener("touchstart", (e) => { e.preventDefault(); canvas.focus(); }, { passive: false });
+
+// Handle virtual touch & gyro input forwarded from parent window
+window.addEventListener("message", (e) => {
+  if (e.data?.type === "recomp-virtual-key") {
+    const { key, code, keyCode, action } = e.data;
+    const evtType = action === "up" ? "keyup" : "keydown";
+    const evt = new KeyboardEvent(evtType, {
+      key: key || code,
+      code: code || key,
+      keyCode: keyCode || 0,
+      which: keyCode || 0,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    });
+    canvas.dispatchEvent(evt);
+    document.dispatchEvent(evt);
+    window.dispatchEvent(evt);
+  }
+});
 start().catch((e) => { status(e.message === "Failed to fetch" ? "A download failed. Choose Stop game, then Start game to retry. Your saves are kept." : e.message, true); stopRuntime(); });
 </script>
 <script type="module">

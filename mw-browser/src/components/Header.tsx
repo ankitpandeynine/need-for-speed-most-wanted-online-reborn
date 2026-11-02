@@ -1,6 +1,6 @@
 import React from 'react';
 import { ViewTab } from '../types';
-import { Gauge, Sliders, HardDrive, Layers, Play, Square, Car, Users, Trophy, Map, Warehouse, Disc } from 'lucide-react';
+import { Play, Square, Gauge, Smartphone, Sliders, HardDrive } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: ViewTab;
@@ -19,112 +19,88 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="header-container">
-      {/* Brand & Title */}
+      {/* Brand & Title - NFSMW 2005 Inspired */}
       <div className="header-brand" onClick={() => onSelectTab('dashboard')}>
         <div className="brand-badge">
-          <Car size={22} color="#000" />
+          <span style={{ fontWeight: 900, fontSize: '15px', color: '#000', letterSpacing: '-0.05em' }}>MW</span>
         </div>
         <div>
           <div className="brand-title">
             NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
-            <span className="brand-tag">ONLINE REBORN</span>
+            <span className="brand-tag">2005 REBORN</span>
           </div>
           <div className="brand-subtitle">
             <span className="status-dot"></span>
-            120 Hz Simulation • WebGPU {webGpuSupported ? 'Active' : 'Metal / Vulkan'}
+            120 Hz Physics • WebGPU {webGpuSupported ? 'Active' : 'Metal / Vulkan'}
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <nav className="header-nav" style={{ overflowX: 'auto', maxWidth: 'calc(100vw - 420px)' }}>
+      {/* Simplified, Clean Navigation Tabs */}
+      <nav className="header-nav">
         <button
           onClick={() => onSelectTab('dashboard')}
           className={`nav-tab-btn ${currentTab === 'dashboard' ? 'active' : ''}`}
+          title="Game Launcher"
         >
           <Gauge size={15} />
-          <span>Dashboard</span>
+          <span>Play</span>
         </button>
 
         <button
-          onClick={() => onSelectTab('blacklist')}
-          className={`nav-tab-btn ${currentTab === 'blacklist' ? 'active' : ''}`}
+          onClick={() => onSelectTab('controls')}
+          className={`nav-tab-btn ${currentTab === 'controls' ? 'active' : ''}`}
+          title="Mobile Touch Controls & Gyroscope Steering"
         >
-          <Trophy size={15} color={currentTab === 'blacklist' ? '#f59e0b' : 'currentColor'} />
-          <span>Blacklist 15</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('map')}
-          className={`nav-tab-btn ${currentTab === 'map' ? 'active' : ''}`}
-        >
-          <Map size={15} />
-          <span>Rockport Map</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('garage')}
-          className={`nav-tab-btn ${currentTab === 'garage' ? 'active' : ''}`}
-        >
-          <Warehouse size={15} />
-          <span>Garage</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('eatrax')}
-          className={`nav-tab-btn ${currentTab === 'eatrax' ? 'active' : ''}`}
-        >
-          <Disc size={15} />
-          <span>EA Trax</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('multiplayer')}
-          className={`nav-tab-btn ${currentTab === 'multiplayer' ? 'active' : ''}`}
-        >
-          <Users size={15} />
-          <span>Multiplayer</span>
-          <span className="live-pill">LIVE</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('mods')}
-          className={`nav-tab-btn ${currentTab === 'mods' ? 'active' : ''}`}
-        >
-          <Layers size={15} />
-          <span>Mods</span>
-        </button>
-
-        <button
-          onClick={() => onSelectTab('storage')}
-          className={`nav-tab-btn ${currentTab === 'storage' ? 'active' : ''}`}
-        >
-          <HardDrive size={15} />
-          <span>Storage</span>
+          <Smartphone size={15} color={currentTab === 'controls' ? '#f59e0b' : 'currentColor'} />
+          <span>Mobile & Controls</span>
         </button>
 
         <button
           onClick={() => onSelectTab('settings')}
           className={`nav-tab-btn ${currentTab === 'settings' ? 'active' : ''}`}
+          title="Graphics, Resolution & Audio"
         >
           <Sliders size={15} />
           <span>Settings</span>
         </button>
+
+        <button
+          onClick={() => onSelectTab('storage')}
+          className={`nav-tab-btn ${currentTab === 'storage' ? 'active' : ''}`}
+          title="Game Files & OPFS Cache Storage"
+        >
+          <HardDrive size={15} />
+          <span>Game Assets</span>
+        </button>
       </nav>
 
-      {/* Action Button */}
-      <div className="header-actions">
-        {isRunning ? (
-          <button onClick={onToggleGame} className="btn btn-danger">
-            <Square size={16} fill="currentColor" />
-            <span>Stop Session</span>
-          </button>
-        ) : (
-          <button onClick={onToggleGame} className="btn btn-primary">
-            <Play size={16} fill="#000" />
-            <span>Start Game</span>
-          </button>
-        )}
+      {/* Essential Session Control */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <button
+          onClick={onToggleGame}
+          className={`btn ${isRunning ? 'btn-danger' : 'btn-primary'}`}
+          style={{
+            padding: '8px 18px',
+            fontSize: '13px',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            boxShadow: isRunning ? '0 0 16px rgba(239, 68, 68, 0.4)' : '0 0 16px rgba(245, 158, 11, 0.35)',
+          }}
+        >
+          {isRunning ? (
+            <>
+              <Square size={14} fill="currentColor" />
+              <span>Stop Session</span>
+            </>
+          ) : (
+            <>
+              <Play size={14} fill="#000" />
+              <span>Start Game</span>
+            </>
+          )}
+        </button>
       </div>
     </header>
   );

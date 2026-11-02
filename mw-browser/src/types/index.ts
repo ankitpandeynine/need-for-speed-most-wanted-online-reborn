@@ -3,6 +3,18 @@
  * Platform Type Definitions
  */
 
+export interface MobileControlSettings {
+  enabled: boolean;
+  layout: 'split' | 'dpad' | 'gyro_pedals';
+  buttonScale: number; // 0.8 to 1.5
+  opacity: number; // 0.2 to 1.0
+  swapHands: boolean; // left-handed mode
+  haptics: boolean;
+  gyroEnabled: boolean;
+  gyroSensitivity: number; // 0.5 to 3.0
+  gyroDeadzone: number; // 1 to 10 degrees
+}
+
 export interface GameSettings {
   resolution: '720p' | '1080p' | '1440p' | 'auto';
   frameRateLimit: 30 | 60 | 120;
@@ -16,6 +28,7 @@ export interface GameSettings {
   audioVolume: number; // 0 - 100
   musicVolume: number; // 0 - 100
   controllerLayout: 'xbox' | 'playstation' | 'keyboard_arrows' | 'keyboard_wasd';
+  mobileControls: MobileControlSettings;
 }
 
 export interface ModItem {
@@ -43,14 +56,9 @@ export interface StorageStatus {
 
 export type ViewTab =
   | 'dashboard'
-  | 'blacklist'
-  | 'map'
-  | 'garage'
-  | 'eatrax'
-  | 'multiplayer'
-  | 'mods'
-  | 'storage'
+  | 'controls'
   | 'settings'
+  | 'storage'
   | 'game';
 
 export interface BlacklistRaceEvent {

@@ -13,6 +13,12 @@ An open-source, web-first platform port and modern recreation of **Need for Spee
 ## 🏎️ Key Features
 
 - **Authentic 3D WebGL / WebGPU Engine**: High-fidelity Three.js 3D rendering pipeline featuring Rockport's iconic autumn golden-hour visual atmosphere, procedural Highway 99 asphalt with aggregate pebble grain and tire burnout skid marks, steel crash guardrails, roadside pursuit breakers, overhead route sign gantries, and concrete highway overpass bridges.
+- **📱 Full Mobile Support & Gyroscope Steering**:
+  - Native on-screen touch pedals for **Gas (Front Key)**, **Brake (Back Key)**, **Steer Left**, **Steer Right**, **Nitrous (NOS)**, **Handbrake**, and **Speedbreaker**.
+  - **Phone Tilt Steering**: Real-time Gyroscope motion steering with iOS sensor permissions, deadzone controls, sensitivity scaling (0.5x–3.0x), and one-tap zero calibration.
+  - **Live Customization Drawer**: Adjust button size (80%–150%), opacity (20%–100%), haptic feedback vibration, and toggle left-handed mode directly in-game.
+  - **Adaptive UI**: Responsive layouts for both **Landscape** (full-screen immersive cockpit) and **Portrait** (16:9 viewport + ergonomic gamepad deck).
+- **🚀 100% Free Hosting ($0 Cost)**: Detailed step-by-step instructions in [`HOSTING_GUIDE.md`](HOSTING_GUIDE.md) for deploying to **GitHub Pages**, **Vercel**, **Cloudflare R2** (0 egress fees), or playing instantly via **Local OPFS Folder Import**.
 - **The Blacklist 15 Career Mode**: Complete career dossier featuring all 15 rivals (#15 Sonny, #14 Taz, #10 Baron, #5 Webster, #1 Razor) with detailed driver bios, rival quotes, car specifications, race events (Circuit, Sprint, Speedtrap, Tollbooth), pursuit milestones, bounty requirements, and direct 3D race launch.
 - **Rockport County GPS World Map**: Interactive GPS vector map encompassing all 3 major districts (Rosewood Suburbs, Camden Beach coastal industrial zone, and Downtown Rockport skyscrapers) and the Interstate 99 loop, with filterable pins for safehouses, races, destructible pursuit breakers, and cooldown hiding spots with instant GPS drive targeting.
 - **3D Garage / Turntable Showroom**: Real-time 3D vehicle showroom featuring a rotating turntable with dynamic studio lighting and PBR reflections. Inspect the fleet (BMW M3 GTR E46, Porsche Carrera GT, Corvette C6.R, Ford GT, and Police Interceptor), examine technical performance metrics (Top Speed, 0-60 Acceleration, Handling), and take them directly onto Highway 99.

@@ -520,3 +520,214 @@ h1, h2, h3, h4, .brand-font {
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* =========================================================
+   Need for Speed: Most Wanted (2005) - Mobile Touch & Gyro UI
+   ========================================================= */
+
+.nfsmw-touch-overlay {
+  transition: opacity 0.2s ease;
+}
+
+.nfsmw-touch-btn.util-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(14, 18, 26, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  transition: transform 0.1s, background 0.1s, border-color 0.1s;
+}
+
+.nfsmw-touch-btn.util-btn:active {
+  transform: scale(0.92);
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+.nfsmw-touch-btn.active-speedbreaker {
+  background: rgba(234, 179, 8, 0.35) !important;
+  border-color: #eab308 !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.5) !important;
+}
+
+/* Primary Touch Controls Buttons (Steering, Gas, Brake, NOS) */
+.nfsmw-touch-pad-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(22, 28, 40, 0.88) 0%, rgba(12, 16, 24, 0.94) 100%);
+  border: 2px solid rgba(245, 158, 11, 0.45);
+  border-radius: 16px;
+  color: #fff;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  WebkitUserSelect: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  transition: transform 0.08s ease, border-color 0.08s, box-shadow 0.08s, background 0.08s;
+  position: relative;
+  overflow: hidden;
+}
+
+.nfsmw-touch-pad-btn .btn-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+.nfsmw-touch-pad-btn:active,
+.nfsmw-touch-pad-btn.pressed {
+  transform: scale(0.92);
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.3) 0%, rgba(22, 28, 40, 0.95) 100%);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.5), inset 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+/* Gas Pedal */
+.nfsmw-touch-pad-btn.gas-pedal-btn {
+  border-color: rgba(16, 185, 129, 0.6);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.2) 0%, rgba(12, 20, 24, 0.92) 100%);
+}
+
+.nfsmw-touch-pad-btn.gas-pedal-btn:active,
+.nfsmw-touch-pad-btn.gas-pedal-btn.pressed {
+  border-color: #10b981;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.45) 0%, rgba(12, 20, 24, 0.95) 100%);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.6), inset 0 0 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Brake Pedal */
+.nfsmw-touch-pad-btn.brake-pedal-btn {
+  border-color: rgba(239, 68, 68, 0.6);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.2) 0%, rgba(20, 12, 14, 0.92) 100%);
+}
+
+.nfsmw-touch-pad-btn.brake-pedal-btn:active,
+.nfsmw-touch-pad-btn.brake-pedal-btn.pressed {
+  border-color: #ef4444;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.45) 0%, rgba(20, 12, 14, 0.95) 100%);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.6), inset 0 0 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Nitrous (NOS) Boost */
+.nfsmw-touch-pad-btn.nos-btn {
+  border-color: rgba(6, 182, 212, 0.65);
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.22) 0%, rgba(10, 18, 28, 0.92) 100%);
+}
+
+.nfsmw-touch-pad-btn.nos-btn:active,
+.nfsmw-touch-pad-btn.nos-btn.pressed {
+  border-color: #06b6d4;
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.5) 0%, rgba(10, 18, 28, 0.96) 100%);
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.7), inset 0 0 14px rgba(6, 182, 212, 0.5);
+}
+
+/* Handbrake */
+.nfsmw-touch-pad-btn.handbrake-btn {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: linear-gradient(145deg, rgba(30, 36, 48, 0.85) 0%, rgba(14, 18, 24, 0.95) 100%);
+}
+
+.nfsmw-touch-pad-btn.handbrake-btn:active,
+.nfsmw-touch-pad-btn.handbrake-btn.pressed {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.4);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spin-anim {
+  animation: spin 3s linear infinite;
+}
+
+/* =========================================================
+   Responsive Mobile UI Adaptations (Portrait & Landscape)
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .header-container {
+    padding: 10px 14px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-brand .brand-title {
+    font-size: 15px;
+  }
+
+  .header-nav {
+    max-width: 100% !important;
+    padding-bottom: 4px;
+  }
+
+  .nav-tab-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .nfsmw-toolbar {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .nfsmw-game-container {
+    height: calc(100vh - 60px);
+    min-height: auto;
+  }
+}
+
+/* Mobile Portrait Mode */
+@media (max-width: 768px) and (orientation: portrait) {
+  .nfsmw-viewport {
+    height: 52vh;
+    min-height: 280px;
+  }
+
+  .nfsmw-game-container {
+    height: 100vh;
+  }
+
+  .nfsmw-touch-overlay {
+    bottom: 0;
+  }
+}
+
+/* Mobile Landscape Mode (Full Immersion) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header-container {
+    display: none !important;
+  }
+
+  .nfsmw-toolbar {
+    padding: 4px 16px;
+    background: rgba(10, 14, 20, 0.85);
+  }
+
+  .nfsmw-game-container {
+    height: 100vh !important;
+  }
+
+  .nfsmw-viewport {
+    height: 100% !important;
+  }
+}

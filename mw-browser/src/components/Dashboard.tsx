@@ -1,370 +1,325 @@
 import React from 'react';
-import { Play, Sparkles, HardDrive, Zap, Gamepad2, Info, Trophy, Gauge, Shield, Users, Map, Warehouse, Disc } from 'lucide-react';
-import { GameSettings, ModItem, StorageStatus } from '../types';
+import { Play, Smartphone, Sliders, HardDrive, Zap, ShieldCheck, ChevronRight } from 'lucide-react';
+import { GameSettings, StorageStatus } from '../types';
 
 interface DashboardProps {
   onStartGame: () => void;
   settings: GameSettings;
   storage: StorageStatus;
-  mods: ModItem[];
-  onOpenMods: () => void;
+  onOpenControls: () => void;
+  onOpenSettings: () => void;
   onOpenStorage: () => void;
-  onOpenMultiplayer?: () => void;
-  onOpenBlacklist?: () => void;
-  onOpenMap?: () => void;
-  onOpenGarage?: () => void;
-  onOpenEATrax?: () => void;
   webGpuName?: string;
 }
-
-const FEATURED_CARS = [
-  {
-    name: 'BMW M3 GTR (E46)',
-    class: 'Custom Tuned Blacklist #1',
-    topSpeed: '242 MPH',
-    accel: '9.8 / 10',
-    handling: '10.0 / 10',
-    color: '#06b6d4',
-  },
-  {
-    name: 'Porsche Carrera GT',
-    class: 'Super Exotic (Blacklist #2)',
-    topSpeed: '238 MPH',
-    accel: '9.5 / 10',
-    handling: '9.4 / 10',
-    color: '#f59e0b',
-  },
-  {
-    name: 'Ford GT',
-    class: 'Exotic Muscle (Blacklist #4)',
-    topSpeed: '235 MPH',
-    accel: '9.2 / 10',
-    handling: '9.0 / 10',
-    color: '#10b981',
-  },
-  {
-    name: 'Lamborghini Gallardo',
-    class: 'All-Wheel Drive (Blacklist #6)',
-    topSpeed: '228 MPH',
-    accel: '9.6 / 10',
-    handling: '9.3 / 10',
-    color: '#a855f7',
-  },
-];
-
-const BLACKLIST_RIVALS = [
-  { rank: '#1', name: 'Razor (Clarence Callahan)', car: 'BMW M3 GTR', heat: 'Heat 5+' },
-  { rank: '#2', name: 'Bull (Toru Sato)', car: 'Mercedes-Benz SLR McLaren', heat: 'Heat 5' },
-  { rank: '#3', name: 'Ronnie (Ronald McCrea)', car: 'Aston Martin DB9', heat: 'Heat 5' },
-  { rank: '#4', name: 'JV (Joe Vega)', car: 'Dodge Viper SRT-10', heat: 'Heat 4' },
-  { rank: '#5', name: 'Webster (Wes Allen)', car: 'Chevrolet Corvette C6', heat: 'Heat 4' },
-];
 
 export const Dashboard: React.FC<DashboardProps> = ({
   onStartGame,
   settings,
   storage,
-  mods,
-  onOpenMods,
+  onOpenControls,
+  onOpenSettings,
   onOpenStorage,
-  onOpenMultiplayer,
-  onOpenBlacklist,
-  onOpenMap,
-  onOpenGarage,
-  onOpenEATrax,
   webGpuName,
 }) => {
-  const activeModsCount = mods.filter((m) => m.enabled).length;
-
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '32px 24px' }}>
-      {/* Hero Banner */}
+    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px' }}>
+      {/* Hero Banner - Authentic NFSMW 2005 Industrial Aesthetic */}
       <div
         className="glass-panel"
         style={{
-          padding: '44px',
-          marginBottom: '32px',
+          padding: '40px 32px',
+          marginBottom: '28px',
           position: 'relative',
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, rgba(22, 27, 37, 0.95) 0%, rgba(13, 16, 23, 0.98) 100%)',
+          background: 'linear-gradient(135deg, rgba(20, 24, 34, 0.96) 0%, rgba(10, 13, 18, 0.99) 100%)',
           border: '1px solid #273042',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(245, 158, 11, 0.2)',
         }}
       >
-        <div style={{ maxWidth: '680px', position: 'relative', zIndex: 10 }}>
+        {/* Subtle decorative background stripe */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: '-60px',
+            width: '320px',
+            height: '100%',
+            background: 'linear-gradient(135deg, transparent 40%, rgba(245, 158, 11, 0.05) 50%, transparent 60%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div style={{ maxWidth: '720px', position: 'relative', zIndex: 10 }}>
+          {/* Badge */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '5px 14px',
               borderRadius: '20px',
               background: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
+              border: '1px solid rgba(245, 158, 11, 0.35)',
               marginBottom: '16px',
             }}
           >
-            <Zap size={16} color="#f59e0b" />
-            <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Ahead-of-Time WebAssembly + WebGPU Engine
+            <Zap size={14} color="#f59e0b" />
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 800,
+                color: '#f59e0b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              WebGPU • Ahead-Of-Time Recompiled WASM
             </span>
           </div>
 
-          <h2 style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1.12, marginBottom: '16px', color: '#fff' }}>
-            NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span> (2005)
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '28px', lineHeight: 1.6 }}>
-            Run the original 2005 Black Edition in modern web browsers at fixed 120 Hz physics simulation.
-            Featuring high-definition texture injection, widescreen FOV, custom vehicle mods, and browser-native virtual storage.
+          {/* Title */}
+          <h1
+            style={{
+              fontSize: 'clamp(32px, 5vw, 44px)',
+              fontWeight: 900,
+              lineHeight: 1.1,
+              marginBottom: '14px',
+              color: '#ffffff',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
+          </h1>
+
+          <p style={{ color: '#94a3b8', fontSize: '15.5px', marginBottom: '28px', lineHeight: 1.6 }}>
+            Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers.
+            Featuring locked 120 Hz physics simulation, on-screen mobile touch pedals, gyroscope tilt steering, and native OPFS storage caching.
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button onClick={onStartGame} className="btn btn-primary" style={{ padding: '14px 28px', fontSize: '16px' }}>
-              <Play size={20} fill="#000" />
-              Launch 3D Game Now
-            </button>
-            {onOpenBlacklist && (
-              <button
-                onClick={onOpenBlacklist}
-                className="btn btn-secondary"
-                style={{
-                  padding: '14px 20px',
-                  border: '1px solid #f59e0b',
-                  color: '#f59e0b',
-                  fontWeight: 700,
-                }}
-              >
-                <Trophy size={18} color="#f59e0b" />
-                Blacklist 15 Rivals
-              </button>
-            )}
-            {onOpenMap && (
-              <button onClick={onOpenMap} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
-                <Map size={18} color="#10b981" />
-                Rockport GPS Map
-              </button>
-            )}
-            {onOpenGarage && (
-              <button onClick={onOpenGarage} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
-                <Warehouse size={18} color="#06b6d4" />
-                3D Garage Showroom
-              </button>
-            )}
-            {onOpenEATrax && (
-              <button onClick={onOpenEATrax} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
-                <Disc size={18} color="#ec4899" />
-                EA Trax OST
-              </button>
-            )}
-            {onOpenMultiplayer && (
-              <button
-                onClick={onOpenMultiplayer}
-                className="btn btn-secondary"
-                style={{
-                  padding: '14px 20px',
-                  border: '1px solid #3b82f6',
-                  color: '#fff',
-                }}
-              >
-                <Users size={18} color="#3b82f6" />
-                Multiplayer <span className="live-pill" style={{ marginLeft: '4px' }}>LIVE</span>
-              </button>
-            )}
-            <button onClick={onOpenMods} className="btn btn-secondary" style={{ padding: '14px 20px' }}>
-              <Sparkles size={18} color="#a855f7" />
-              Mods ({activeModsCount})
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Metrics Status Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        {/* Card 1: Graphics & Renderer */}
-        <div className="glass-panel" style={{ padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              GRAPHICS ENGINE
-            </span>
-            <Zap size={18} color="#06b6d4" />
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            WebGPU Native
-          </div>
-          <div style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '16px' }}>
-            {webGpuName || 'Direct3D 9 to WGSL Translation'}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #232b3c', paddingTop: '10px' }}>
-            <span style={{ color: '#94a3b8' }}>Target Res:</span>
-            <span style={{ color: '#f59e0b', fontWeight: 600 }}>{settings.resolution.toUpperCase()}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '6px' }}>
-            <span style={{ color: '#94a3b8' }}>Simulation Rate:</span>
-            <span style={{ color: '#10b981', fontWeight: 600 }}>{settings.simulationHz} Hz Fixed</span>
-          </div>
-        </div>
-
-        {/* Card 2: Mod Ecosystem */}
-        <div className="glass-panel" style={{ padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              MOD RUNTIME
-            </span>
-            <Sparkles size={18} color="#f59e0b" />
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            {activeModsCount} Mods Active
-          </div>
-          <div style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '16px' }}>
-            Layered VFS & HD Texture Injector
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #232b3c', paddingTop: '10px' }}>
-            <span style={{ color: '#94a3b8' }}>HD Textures:</span>
-            <span style={{ color: '#10b981', fontWeight: 600 }}>Enabled (8x AF)</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '6px' }}>
-            <span style={{ color: '#94a3b8' }}>Widescreen HUD:</span>
-            <span style={{ color: '#10b981', fontWeight: 600 }}>Active</span>
-          </div>
-        </div>
-
-        {/* Card 3: Storage & Assets */}
-        <div className="glass-panel" style={{ padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              GAME STORAGE
-            </span>
-            <HardDrive size={18} color="#10b981" />
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            {storage.hasSpeedExe ? 'Game Ready' : 'Awaiting Files'}
-          </div>
-          <div style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '16px' }}>
-            {storage.hasSpeedExe ? 'Speed.exe verified (Black Edition)' : 'Import folder or ISO once'}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #232b3c', paddingTop: '10px' }}>
-            <span style={{ color: '#94a3b8' }}>Storage Type:</span>
-            <span style={{ color: '#06b6d4', fontWeight: 600 }}>OPFS / Cache Storage</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '6px' }}>
-            <span style={{ color: '#94a3b8' }}>Action:</span>
-            <button onClick={onOpenStorage} style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: '13px', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
-              {storage.hasSpeedExe ? 'Inspect Files' : 'Import Game'}
-            </button>
-          </div>
-        </div>
-
-        {/* Card 4: Controller */}
-        <div className="glass-panel" style={{ padding: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              INPUT & CONTROLS
-            </span>
-            <Gamepad2 size={18} color="#a855f7" />
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-            Console Gamepad
-          </div>
-          <div style={{ fontSize: '12.5px', color: '#64748b', marginBottom: '16px' }}>
-            Xbox 360 / PS2 Layout & WASD
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #232b3c', paddingTop: '10px' }}>
-            <span style={{ color: '#94a3b8' }}>Gas / Brake:</span>
-            <span style={{ color: '#fff', fontWeight: 600 }}>RT / LT (Up / Down)</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginTop: '6px' }}>
-            <span style={{ color: '#94a3b8' }}>Nitrous / Speedbreaker:</span>
-            <span style={{ color: '#fff', fontWeight: 600 }}>B / X (X / G keys)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Vehicles Showcase */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>
-              ICONIC CARS & MODDING ROSTER
-            </h3>
-            <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
-              High-polygon 3D meshes, custom bodykits, and engine performance profiles.
-            </p>
-          </div>
-          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>4 Configured Vehicles</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '16px' }}>
-          {FEATURED_CARS.map((car, idx) => (
-            <div
-              key={idx}
-              className="glass-panel"
-              style={{ padding: '18px', borderLeft: `3px solid ${car.color}`, cursor: onOpenGarage ? 'pointer' : 'default' }}
-              onClick={onOpenGarage}
-              title="Click to view in 3D Garage Showroom"
+          {/* Single-Click Big Action Buttons */}
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={onStartGame}
+              className="btn btn-primary"
+              style={{
+                padding: '14px 34px',
+                fontSize: '16px',
+                fontWeight: 900,
+                letterSpacing: '0.06em',
+                boxShadow: '0 0 24px rgba(245, 158, 11, 0.45)',
+              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', color: car.color, fontWeight: 700, textTransform: 'uppercase' }}>
-                  {car.class}
-                </span>
-                <Gauge size={15} color={car.color} />
+              <Play size={20} fill="#000" />
+              START ENGINE / PLAY NOW
+            </button>
+
+            <button
+              onClick={onOpenControls}
+              className="btn btn-secondary"
+              style={{
+                padding: '14px 20px',
+                fontSize: '14px',
+                fontWeight: 700,
+                borderColor: '#f59e0b',
+                color: '#f59e0b',
+              }}
+            >
+              <Smartphone size={17} color="#f59e0b" />
+              Mobile & Touch Controls
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 3 Essential Quick Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '20px',
+          marginBottom: '32px',
+        }}
+      >
+        {/* Card 1: Mobile & Touch Controls */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s',
+          }}
+          onClick={onOpenControls}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                CONTROLS & MOBILE
+              </span>
+              <Smartphone size={18} color="#f59e0b" />
+            </div>
+
+            <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
+              Touch & Gyro Steering
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
+              On-screen virtual pedals for Gas, Brake, Left, Right, Nitrous, Handbrake, plus phone tilt steering.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Touch Layout:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Adaptive (Split Pedals)</span>
               </div>
-              <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>
-                {car.name}
-              </h4>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8', borderTop: '1px solid #232b3c', paddingTop: '8px' }}>
-                <span>Top Speed: <strong style={{ color: '#fff' }}>{car.topSpeed}</strong></span>
-                <span>Accel: <strong style={{ color: '#fff' }}>{car.accel}</strong></span>
-                <span>Handling: <strong style={{ color: '#fff' }}>{car.handling}</strong></span>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Phone Gyroscope:</span>
+                <span style={{ color: settings.mobileControls.gyroEnabled ? '#06b6d4' : '#cbd5e1', fontWeight: 700 }}>
+                  {settings.mobileControls.gyroEnabled ? 'Sensors Active' : 'Supported'}
+                </span>
               </div>
             </div>
-          ))}
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '13px', fontWeight: 700 }}>
+            <span>Customize Touch Controls</span>
+            <ChevronRight size={15} />
+          </div>
+        </div>
+
+        {/* Card 2: Engine & Graphics */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s',
+          }}
+          onClick={onOpenSettings}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                ENGINE & GRAPHICS
+              </span>
+              <Sliders size={18} color="#06b6d4" />
+            </div>
+
+            <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
+              WebGPU Metal / Vulkan
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
+              {webGpuName ? `${webGpuName} • ` : ''}Direct3D 9 translated to WebGPU WGSL shaders. Runs smoothly at locked 120 Hz physics simulation.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Resolution:</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>1280×720 (16:9 Widescreen)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Physics Rate:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>120 Hz Fixed Rate</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '13px', fontWeight: 700 }}>
+            <span>Tune Display & Sound</span>
+            <ChevronRight size={15} />
+          </div>
+        </div>
+
+        {/* Card 3: Storage & Game Files */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s',
+          }}
+          onClick={onOpenStorage}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                GAME ASSETS
+              </span>
+              <HardDrive size={18} color="#10b981" />
+            </div>
+
+            <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
+              OPFS Browser Storage
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
+              Cached locally in your browser’s Origin Private File System. Import your retail folder once or stream on demand.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Asset Cache:</span>
+                <span style={{ color: storage.hasSpeedExe ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                  {storage.hasSpeedExe ? 'Speed.exe Ready' : 'Download on Launch'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Storage Persistence:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Persistent (No Wipe)</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '13px', fontWeight: 700 }}>
+            <span>Manage Storage & Import</span>
+            <ChevronRight size={15} />
+          </div>
         </div>
       </div>
 
-      {/* Blacklist 15 Career Preview */}
+      {/* Quick Play Instructions */}
       <div
         className="glass-panel"
-        style={{ padding: '24px', marginBottom: '32px', cursor: onOpenBlacklist ? 'pointer' : 'default' }}
-        onClick={onOpenBlacklist}
-        title="Click to view Blacklist 15 Career Dossiers & Races"
+        style={{
+          padding: '20px 24px',
+          background: 'rgba(15, 20, 28, 0.7)',
+          border: '1px solid #232b3c',
+          borderRadius: '12px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Trophy size={20} color="#f59e0b" />
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
-              ROCKPORT BLACKLIST 15 LEADERBOARD
-            </h3>
-          </div>
-          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 700 }}>
-            VIEW FULL BLACKLIST →
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          {BLACKLIST_RIVALS.map((rival, idx) => (
-            <div key={idx} style={{ background: '#10141d', padding: '12px 14px', borderRadius: '8px', border: '1px solid #232b3c' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>{rival.rank}</span>
-                <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600 }}>{rival.heat}</span>
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{rival.name}</div>
-              <div style={{ fontSize: '11.5px', color: '#64748b' }}>{rival.car}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Controller Quick Reference Pill */}
-      <div className="glass-panel" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Info size={18} color="#f59e0b" />
-          <span style={{ fontSize: '13.5px', color: '#cbd5e1' }}>
-            <strong style={{ color: '#fff' }}>Control Scheme:</strong> RT Accelerate • LT Brake/Reverse • Left Stick Steer • A E-Brake/Accept • B Nitrous • X Speedbreaker • Y Camera • Back Reset • Start Pause
-          </span>
+          <ShieldCheck size={22} color="#10b981" />
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
+              100% Free & Open Source ($0 Cost)
+            </div>
+            <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+              Host anywhere on GitHub Pages or Vercel. Stream assets via Cloudflare R2 or import your local game folder.
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={16} color="#10b981" />
-          <span style={{ fontSize: '13px', color: '#10b981', fontWeight: 600 }}>Cross-Origin Isolated Context</span>
-        </div>
+
+        <button
+          onClick={onStartGame}
+          className="btn btn-secondary"
+          style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b' }}
+        >
+          Launch Now
+        </button>
       </div>
     </div>
   );
