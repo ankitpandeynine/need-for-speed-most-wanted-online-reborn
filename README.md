@@ -13,6 +13,19 @@ An open-source, web-first platform port and modern recreation of **Need for Spee
 ## 🏎️ Key Features
 
 - **Authentic 3D WebGL / WebGPU Engine**: High-fidelity Three.js 3D rendering pipeline featuring Rockport's iconic autumn golden-hour visual atmosphere, procedural Highway 99 asphalt with aggregate pebble grain and tire burnout skid marks, steel crash guardrails, roadside pursuit breakers, overhead route sign gantries, and concrete highway overpass bridges.
+- **🛠️ 1-Click In-Browser Mod Workshop**:
+  - Direct 1-click install and toggle for the community's most famous mods:
+    - **ThirteenAG Widescreen Fix**: 16:9 / 21:9 Hor+ FOV, unstretched HUD dials, and widescreen camera scaling.
+    - **Xbox 360 Visuals & Xenon Lighting Overhaul**: Restores warm golden-hour bloom, road specular sheen, motion blur, and wet rain droplets missing on PC.
+    - **NFSMW Extra Options (ExOpts Suite)**: Challenge series unlocks, debug free-cam, custom pursuit difficulty (Heat 1-10), and custom traffic density.
+    - **4K Upscaled Vector HUD & Minimap**: Crisp high-DPI dials, sharp tachometer needles, and clean radar blips.
+    - **NFSMW 4K Redux Texture Remaster**: High-definition asphalt textures, aggregate tarmac grains, tire burnout marks, and roadside guardrails.
+    - **NFS Unlimiter & Legendary Car Pack**: Unlocks Nissan Skyline GT-R R34, Toyota Supra MK4, Pagani Zonda C12, and Porsche 911 GT3 RS with full audio.
+    - **Pepega Mod & Pro Drift Handling**: Drift slip-angle physics, responsive counter-steering, and burnout smoke.
+    - **EA Trax Lossless Audio Remaster**: Uncompressed 320kbps pursuit music from Styles of Beyond, Disturbed, and Celldweller.
+  - **Drag-and-Drop Mod Installer**: Drop any `.zip`, `.mwmod`, or `.bin` mod archive directly into the browser to layer it dynamically into the Virtual File System (VFS).
+  - **Install from URL**: Paste direct download links from GitHub or NFSMods to install into browser OPFS storage.
+  - **1-Click Recommended Pack**: Installs all essential graphics, HUD, and widescreen fixes with a single button.
 - **📱 Full Mobile Support & Gyroscope Steering**:
   - Native on-screen touch pedals for **Gas (Front Key)**, **Brake (Back Key)**, **Steer Left**, **Steer Right**, **Nitrous (NOS)**, **Handbrake**, and **Speedbreaker**.
   - **Phone Tilt Steering**: Real-time Gyroscope motion steering with iOS sensor permissions, deadzone controls, sensitivity scaling (0.5x–3.0x), and one-tap zero calibration.

@@ -72,6 +72,7 @@ export interface StorageStatus {
 
 export type ViewTab =
   | 'dashboard'
+  | 'mods'
   | 'multiplayer'
   | 'controls'
   | 'settings'

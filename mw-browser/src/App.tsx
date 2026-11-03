@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings, KeyBindings } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { ModManagerView } from './components/ModManagerView';
 import { ControlsView } from './components/ControlsView';
 import { MultiplayerView } from './components/MultiplayerView';
 import { StorageManagerView } from './components/StorageManagerView';
@@ -120,6 +121,42 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleToggleMod = (id: string) => {
+    modManager.toggleMod(id);
+    setMods(modManager.getMods());
+  };
+
+  const handleUpdateModPriority = (id: string, newPriority: number) => {
+    modManager.updatePriority(id, newPriority);
+    setMods(modManager.getMods());
+  };
+
+  const handleInstallMod = (file: File) => {
+    const newMod: ModItem = {
+      id: file.name.replace(/\.(mwmod|zip|bin)$/i, '').toLowerCase(),
+      name: file.name.replace(/\.(mwmod|zip|bin)$/i, ''),
+      version: '1.0.0',
+      author: 'Community User Mod',
+      description: 'Imported from local archive into browser VFS.',
+      type: file.name.toLowerCase().includes('car') ? 'vehicle' : 'texture',
+      enabled: true,
+      priority: 70,
+      assetsCount: 8,
+    };
+    modManager.registerMod(newMod);
+    setMods(modManager.getMods());
+  };
+
+  const handleEnableAllRecommended = () => {
+    modManager.enableAllRecommended();
+    setMods(modManager.getMods());
+  };
+
+  const handleResetModDefaults = () => {
+    modManager.resetToPopularDefaults();
+    setMods(modManager.getMods());
+  };
+
   const handleUpdateSettings = (newPartial: Partial<GameSettings>) => {
     setSettings((prev) => ({ ...prev, ...newPartial }));
   };
@@ -150,6 +187,8 @@ export const App: React.FC = () => {
     });
   };
 
+  const activeModsCount = mods.filter((m) => m.enabled).length;
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header
@@ -157,6 +196,7 @@ export const App: React.FC = () => {
         onSelectTab={setCurrentTab}
         isRunning={isRunning}
         webGpuSupported={webGpuSupported}
+        activeModsCount={activeModsCount}
         onToggleGame={() => handleToggleGame()}
       />
 
@@ -183,11 +223,24 @@ export const App: React.FC = () => {
             onStartGame={handleToggleGame}
             settings={settings}
             storage={storage}
+            activeModsCount={activeModsCount}
+            onOpenMods={() => setCurrentTab('mods')}
             onOpenControls={() => setCurrentTab('controls')}
             onOpenMultiplayer={() => setCurrentTab('multiplayer')}
             onOpenSettings={() => setCurrentTab('settings')}
             onOpenStorage={() => setCurrentTab('storage')}
             webGpuName={webGpuAdapterName}
+          />
+        )}
+
+        {currentTab === 'mods' && (
+          <ModManagerView
+            mods={mods}
+            onToggleMod={handleToggleMod}
+            onUpdatePriority={handleUpdateModPriority}
+            onInstallMod={handleInstallMod}
+            onEnableAllRecommended={handleEnableAllRecommended}
+            onResetDefaults={handleResetModDefaults}
           />
         )}
 

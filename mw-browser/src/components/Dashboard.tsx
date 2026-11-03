@@ -1,11 +1,13 @@
 import React from 'react';
-import { Play, HardDrive, Zap, ShieldCheck, ChevronRight, Users, DownloadCloud, Gamepad2 } from 'lucide-react';
+import { Play, HardDrive, Zap, ShieldCheck, ChevronRight, Users, DownloadCloud, Gamepad2, Sparkles } from 'lucide-react';
 import { GameSettings, StorageStatus } from '../types';
 
 interface DashboardProps {
   onStartGame: (offlinePreload?: boolean) => void;
   settings: GameSettings;
   storage: StorageStatus;
+  activeModsCount?: number;
+  onOpenMods: () => void;
   onOpenControls: () => void;
   onOpenMultiplayer: () => void;
   onOpenSettings: () => void;
@@ -17,6 +19,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onStartGame,
   settings,
   storage,
+  activeModsCount = 0,
+  onOpenMods,
   onOpenControls,
   onOpenMultiplayer,
   onOpenSettings,
@@ -50,7 +54,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           }}
         />
 
-        <div style={{ maxWidth: '750px', position: 'relative', zIndex: 10 }}>
+        <div style={{ maxWidth: '780px', position: 'relative', zIndex: 10 }}>
           {/* Badge */}
           <div
             style={{
@@ -74,7 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 letterSpacing: '0.08em',
               }}
             >
-              WebGPU • 120 Hz Simulation • Zero-Lag Offline Caching
+              WebGPU • 120 Hz Simulation • 1-Click In-Browser Mods
             </span>
           </div>
 
@@ -94,7 +98,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <p style={{ color: '#94a3b8', fontSize: '15.5px', marginBottom: '28px', lineHeight: 1.6 }}>
             Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers ({webGpuName || 'WebGPU'} • {settings.resolution.toUpperCase()} 120 Hz).
-            Now with background asset pre-downloading for zero-lag offline gameplay, PC key rebinding, gamepad controller support, and online multiplayer rooms.
+            Install famous community mods (Xbox 360 Shaders, ThirteenAG Widescreen, 4K HUD, Skyline R34) with 1 click right in your browser.
           </p>
 
           {/* Big Action Buttons */}
@@ -132,6 +136,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
 
             <button
+              onClick={onOpenMods}
+              className="btn btn-secondary"
+              style={{
+                padding: '14px 20px',
+                fontSize: '14px',
+                fontWeight: 700,
+                borderColor: '#f59e0b',
+                color: '#f59e0b',
+              }}
+            >
+              <Sparkles size={17} color="#f59e0b" />
+              Mods Workshop ({activeModsCount} Active)
+            </button>
+
+            <button
               onClick={onOpenMultiplayer}
               className="btn btn-secondary"
               style={{
@@ -149,16 +168,64 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* 3 Essential Quick Cards */}
+      {/* 4 Essential Quick Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
           gap: '20px',
           marginBottom: '32px',
         }}
       >
-        {/* Card 1: PC Keybindings & Gamepad */}
+        {/* Card 1: 1-Click Mod Workshop */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'border-color 0.2s',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+          }}
+          onClick={onOpenMods}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                COMMUNITY MODS
+              </span>
+              <Sparkles size={18} color="#f59e0b" />
+            </div>
+
+            <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
+              1-Click Mod Store
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
+              Install ThirteenAG Widescreen, Xbox 360 Shaders, 4K HUD, Skyline R34, and Extra Options with 1 tap.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Installed Mods:</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{activeModsCount} Mods Layered</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Custom Mods:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Drag & Drop .mwmod</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '13px', fontWeight: 700 }}>
+            <span>Explore Mod Workshop</span>
+            <ChevronRight size={15} />
+          </div>
+        </div>
+
+        {/* Card 2: PC Keybindings & Gamepad */}
         <div
           className="glass-panel"
           style={{
@@ -176,7 +243,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 HARDWARE & CONTROLS
               </span>
-              <Gamepad2 size={18} color="#f59e0b" />
+              <Gamepad2 size={18} color="#06b6d4" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
@@ -190,22 +257,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>PC Keyboard:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>Custom Rebinding Active</span>
+                <span style={{ color: '#06b6d4', fontWeight: 700 }}>Custom Rebinding Active</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Gamepad Support:</span>
-                <span style={{ color: '#06b6d4', fontWeight: 700 }}>RT / LT & Dual Analogue</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>RT / LT & Analogue</span>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontSize: '13px', fontWeight: 700 }}>
-            <span>Configure Keybinds & Gamepad</span>
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '13px', fontWeight: 700 }}>
+            <span>Configure Controls</span>
             <ChevronRight size={15} />
           </div>
         </div>
 
-        {/* Card 2: Online Multiplayer Rooms */}
+        {/* Card 3: Online Multiplayer Rooms */}
         <div
           className="glass-panel"
           style={{
@@ -223,7 +290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 ONLINE MULTIPLAYER
               </span>
-              <Users size={18} color="#06b6d4" />
+              <Users size={18} color="#3b82f6" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
@@ -237,22 +304,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Networking:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>P2P WebRTC / BroadcastChannel</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>P2P WebRTC / Broadcast</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Modes:</span>
-                <span style={{ color: '#06b6d4', fontWeight: 700 }}>Sprint, Circuit & Pursuit Tag</span>
+                <span style={{ color: '#3b82f6', fontWeight: 700 }}>Sprint, Circuit & Tag</span>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '13px', fontWeight: 700 }}>
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6', fontSize: '13px', fontWeight: 700 }}>
             <span>Join or Create Room</span>
             <ChevronRight size={15} />
           </div>
         </div>
 
-        {/* Card 3: Storage & Offline Cache */}
+        {/* Card 4: Storage & Offline Cache */}
         <div
           className="glass-panel"
           style={{
@@ -268,13 +335,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                GAME ASSETS & OFFLINE CACHE
+                OFFLINE CACHE
               </span>
               <HardDrive size={18} color="#10b981" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              OPFS Browser Storage
+              Zero-Lag OPFS Cache
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
@@ -296,7 +363,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '13px', fontWeight: 700 }}>
-            <span>Manage Cache & Pre-Download</span>
+            <span>Manage Cache & Preload</span>
             <ChevronRight size={15} />
           </div>
         </div>

@@ -1,12 +1,13 @@
 import React from 'react';
 import { ViewTab } from '../types';
-import { Play, Square, Gauge, Smartphone, Sliders, HardDrive, Users } from 'lucide-react';
+import { Play, Square, Gauge, Smartphone, Sliders, HardDrive, Users, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: ViewTab;
   onSelectTab: (tab: ViewTab) => void;
   isRunning: boolean;
   webGpuSupported: boolean;
+  activeModsCount?: number;
   onToggleGame: () => void;
 }
 
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   isRunning,
   webGpuSupported,
+  activeModsCount = 0,
   onToggleGame,
 }) => {
   return (
@@ -36,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Simplified, Clean Navigation Tabs */}
+      {/* Navigation Tabs */}
       <nav className="header-nav">
         <button
           onClick={() => onSelectTab('dashboard')}
@@ -45,6 +47,30 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Gauge size={15} />
           <span>Play</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab('mods')}
+          className={`nav-tab-btn ${currentTab === 'mods' ? 'active' : ''}`}
+          title="In-Browser Community Mod Workshop"
+        >
+          <Sparkles size={15} color={currentTab === 'mods' ? '#f59e0b' : 'currentColor'} />
+          <span>Mods</span>
+          {activeModsCount > 0 && (
+            <span
+              style={{
+                marginLeft: '4px',
+                background: currentTab === 'mods' ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)',
+                color: currentTab === 'mods' ? '#000' : '#f59e0b',
+                fontSize: '10px',
+                fontWeight: 900,
+                padding: '1px 6px',
+                borderRadius: '8px',
+              }}
+            >
+              {activeModsCount}
+            </span>
+          )}
         </button>
 
         <button
