@@ -8,6 +8,25 @@ export interface TouchButtonPosition {
   y: number; // percentage offset from default or -100 to +100 px
 }
 
+export interface IndividualButtonPosition {
+  x: number; // percentage from left (0 to 100)
+  y: number; // percentage from top (0 to 100)
+}
+
+export interface IndividualTouchPositions {
+  steerLeft?: IndividualButtonPosition;
+  steerRight?: IndividualButtonPosition;
+  accelerate?: IndividualButtonPosition;
+  brake?: IndividualButtonPosition;
+  nitrous?: IndividualButtonPosition;
+  handbrake?: IndividualButtonPosition;
+  speedbreaker?: IndividualButtonPosition;
+  reset?: IndividualButtonPosition;
+  camera?: IndividualButtonPosition;
+  pause?: IndividualButtonPosition;
+  enter?: IndividualButtonPosition;
+}
+
 export interface TouchCustomPositions {
   steerCluster?: TouchButtonPosition;
   pedalsCluster?: TouchButtonPosition;
@@ -26,6 +45,7 @@ export interface MobileControlSettings {
   gyroSensitivity: number; // 0.5 to 3.0
   gyroDeadzone: number; // 1 to 10 degrees
   customPositions?: TouchCustomPositions;
+  individualPositions?: IndividualTouchPositions;
 }
 
 export interface KeyBindings {
@@ -39,6 +59,22 @@ export interface KeyBindings {
   camera: string; // default: 'KeyC'
   reset: string; // default: 'KeyR'
   pause: string; // default: 'Escape'
+}
+
+export interface ControllerBindings {
+  accelerate: number; // default: 7 (RT)
+  brake: number; // default: 6 (LT)
+  steerLeft: string; // 'axis0_neg' or button index
+  steerRight: string; // 'axis0_pos' or button index
+  nitrous: number; // default: 0 (A / Cross)
+  handbrake: number; // default: 2 (X / Square)
+  speedbreaker: number; // default: 1 (B / Circle)
+  camera: number; // default: 3 (Y / Triangle)
+  pause: number; // default: 9 (Start / Options)
+  reset: number; // default: 8 (Back / Share)
+  lookBack: number; // default: 11 (R3 / Right Thumb)
+  rumbleEnabled: boolean;
+  deadzone: number; // 0.05 to 0.30
 }
 
 export interface GameSettings {
@@ -56,8 +92,23 @@ export interface GameSettings {
   controllerLayout: 'xbox' | 'playstation' | 'keyboard_arrows' | 'keyboard_wasd';
   mobileControls: MobileControlSettings;
   keyBindings: KeyBindings;
+  controllerBindings: ControllerBindings;
   offlinePreload: boolean;
   backgroundDownloading: boolean;
+}
+
+export interface FullProfileBackup {
+  format: 'nfsmw-reborn-profile';
+  version: '2.0.0';
+  timestamp: number;
+  createdAt: string;
+  settings: GameSettings;
+  mobileControls: MobileControlSettings;
+  keyBindings: KeyBindings;
+  controllerBindings: ControllerBindings;
+  activeModIds: string[];
+  customModProfiles: ModProfile[];
+  userProfileFiles: Record<string, string>; // relative path -> base64 content
 }
 
 export type ModCategory =

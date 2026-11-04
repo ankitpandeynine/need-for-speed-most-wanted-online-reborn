@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameSettings } from '../types';
-import { Monitor, Volume2, Smartphone, Download, CheckCircle2, Folder } from 'lucide-react';
+import { Monitor, Volume2, Smartphone, Download, CheckCircle2, Folder, FileCode, Upload } from 'lucide-react';
+import { ProfileSyncService } from '../services/profileSync';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -13,6 +14,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installStatus, setInstallStatus] = useState<string | null>(null);
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleExportBackup = async () => {
+    try {
+      const sync = ProfileSyncService.getInstance();
+      const res = await sync.exportBackup();
+      sync.downloadFile(res.blob, res.filename);
+      setBackupStatus(`Exported backup successfully: ${res.filename}`);
+      setTimeout(() => setBackupStatus(null), 4000);
+    } catch (err: any) {
+      alert('Error exporting backup: ' + err.message);
+    }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const sync = ProfileSyncService.getInstance();
+      const res = await sync.importBackup(file);
+      setBackupStatus(res.summary);
+      setTimeout(() => setBackupStatus(null), 4000);
+    } catch (err: any) {
+      alert('Error importing backup: ' + err.message);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -271,6 +301,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
           </div>
+        </div>
+        {/* 4. Universal Settings & Career Progress Backup */}
+        <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid #273042', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FileCode size={20} color="#10b981" />
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
+                  Universal Settings & Career Progress Backup (.nfsmwcfg)
+                </h3>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Export all your settings, mods, touch placements, controller rebinds, and career save files into a single portable backup file.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleExportBackup}
+                className="btn btn-primary"
+                style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 800, background: '#10b981', borderColor: '#34d399' }}
+              >
+                <Download size={14} />
+                <span>Export Backup (.nfsmwcfg)</span>
+              </button>
+
+              <label
+                className="btn btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                <Upload size={14} />
+                <span>Restore / Import</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".nfsmwcfg,.json"
+                  onChange={handleImportBackup}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+
+          {backupStatus && (
+            <div style={{ padding: '8px 14px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', fontSize: '12.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={15} />
+              <span>{backupStatus}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -260,6 +260,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     return () => window.removeEventListener('message', handleMsg);
   }, [onStopGame]);
 
+  // Auto-activate touch controls on touch tap, and auto-hide on keyboard / gamepad
+  useEffect(() => {
+    const handleTouchDetected = () => {
+      setShowTouchControls(true);
+    };
+    window.addEventListener('touchstart', handleTouchDetected, { passive: true });
+    return () => window.removeEventListener('touchstart', handleTouchDetected);
+  }, []);
+
   // Gamepad API Polling
   const prevGamepadButtonsRef = useRef<{ [key: number]: boolean }>({});
   const prevGamepadAxesRef = useRef<{ [key: string]: boolean }>({});
@@ -287,12 +296,31 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const pollGamepad = () => {
       if (navigator.getGamepads) {
         const gamepads = navigator.getGamepads();
+        const binds = _settings?.controllerBindings || {
+          accelerate: 7,
+          brake: 6,
+          steerLeft: 'axis0_neg',
+          steerRight: 'axis0_pos',
+          nitrous: 0,
+          handbrake: 2,
+          speedbreaker: 1,
+          camera: 3,
+          pause: 9,
+          reset: 8,
+          lookBack: 11,
+          deadzone: 0.15,
+        };
+        const deadzone = binds.deadzone || 0.15;
+
         for (const gp of gamepads) {
           if (!gp) continue;
+
+          let anyGamepadInput = false;
 
           const checkButton = (btnIndex: number, key: string, code: string, keyCode: number) => {
             const isDown = gp.buttons[btnIndex]?.pressed || (gp.buttons[btnIndex]?.value || 0) > 0.2;
             const wasDown = !!prevGamepadButtonsRef.current[btnIndex];
+            if (isDown) anyGamepadInput = true;
             if (isDown && !wasDown) {
               handleVirtualKey(key, code, keyCode, 'down');
               prevGamepadButtonsRef.current[btnIndex] = true;
@@ -302,32 +330,29 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             }
           };
 
-          // Throttle / RT (Button 7): Gas
-          checkButton(7, 'ArrowUp', 'ArrowUp', 38);
-          // Brake / LT (Button 6): Brake
-          checkButton(6, 'ArrowDown', 'ArrowDown', 40);
-          // A / Cross (Button 0): Nitrous (NOS)
-          checkButton(0, 'ShiftLeft', 'ShiftLeft', 16);
-          // X / Square (Button 2): Handbrake
-          checkButton(2, 'Space', 'Space', 32);
-          // B / Circle (Button 1): Speedbreaker
-          checkButton(1, 'KeyG', 'KeyG', 71);
-          // Y / Triangle (Button 3): Camera
-          checkButton(3, 'KeyC', 'KeyC', 67);
-          // Start / Options (Button 9): Pause / Menu
-          checkButton(9, 'Escape', 'Escape', 27);
-          // Back / Share (Button 8): Reset Car
-          checkButton(8, 'KeyR', 'KeyR', 82);
-          // D-Pad
+          // Rebound Controller Actions
+          if (typeof binds.accelerate === 'number') checkButton(binds.accelerate, 'ArrowUp', 'ArrowUp', 38);
+          if (typeof binds.brake === 'number') checkButton(binds.brake, 'ArrowDown', 'ArrowDown', 40);
+          if (typeof binds.nitrous === 'number') checkButton(binds.nitrous, 'ShiftLeft', 'ShiftLeft', 16);
+          if (typeof binds.handbrake === 'number') checkButton(binds.handbrake, 'Space', 'Space', 32);
+          if (typeof binds.speedbreaker === 'number') checkButton(binds.speedbreaker, 'KeyG', 'KeyG', 71);
+          if (typeof binds.camera === 'number') checkButton(binds.camera, 'KeyC', 'KeyC', 67);
+          if (typeof binds.pause === 'number') checkButton(binds.pause, 'Escape', 'Escape', 27);
+          if (typeof binds.reset === 'number') checkButton(binds.reset, 'KeyR', 'KeyR', 82);
+          if (typeof binds.lookBack === 'number') checkButton(binds.lookBack, 'KeyL', 'KeyL', 76);
+
+          // Standard D-Pad fallback
           checkButton(12, 'ArrowUp', 'ArrowUp', 38);
           checkButton(13, 'ArrowDown', 'ArrowDown', 40);
           checkButton(14, 'ArrowLeft', 'ArrowLeft', 37);
           checkButton(15, 'ArrowRight', 'ArrowRight', 39);
 
-          // Left Stick Steering (Axis 0)
+          // Analog Stick Steering (Axis 0)
           const axisX = gp.axes[0] || 0;
-          const steerLeft = axisX < -0.25;
-          const steerRight = axisX > 0.25;
+          const steerLeft = axisX < -deadzone;
+          const steerRight = axisX > deadzone;
+
+          if (steerLeft || steerRight) anyGamepadInput = true;
 
           if (steerLeft && !prevGamepadAxesRef.current['left']) {
             handleVirtualKey('ArrowLeft', 'ArrowLeft', 37, 'down');
@@ -344,6 +369,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             handleVirtualKey('ArrowRight', 'ArrowRight', 39, 'up');
             prevGamepadAxesRef.current['right'] = false;
           }
+
+          // Auto-hide on-screen touch controls if gamepad input was active
+          if (anyGamepadInput) {
+            setShowTouchControls(false);
+          }
         }
       }
       animId = requestAnimationFrame(pollGamepad);
@@ -355,7 +385,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('gamepadconnected', onGamepadConnected);
       window.removeEventListener('gamepaddisconnected', onGamepadDisconnected);
     };
-  }, [handleVirtualKey]);
+  }, [handleVirtualKey, _settings?.controllerBindings]);
 
   // PC Keyboard Shortcuts & Custom Keybindings Handler
   useEffect(() => {
@@ -364,6 +394,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      // Auto-hide touch controls when physical keyboard input is detected
+      if (e.isTrusted) {
+        setShowTouchControls(false);
+      }
 
       // Escape key handler: Forward to game, prevent fullscreen exit when permitted
       if (e.key === 'Escape' || e.code === 'Escape') {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings, KeyBindings } from './types';
+import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings, KeyBindings, ControllerBindings } from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { ModManagerView } from './components/ModManagerView';
@@ -37,6 +37,22 @@ const DEFAULT_KEY_BINDINGS: KeyBindings = {
   pause: 'Escape',
 };
 
+export const DEFAULT_CONTROLLER_BINDINGS: ControllerBindings = {
+  accelerate: 7, // RT
+  brake: 6, // LT
+  steerLeft: 'axis0_neg',
+  steerRight: 'axis0_pos',
+  nitrous: 0, // A / Cross
+  handbrake: 2, // X / Square
+  speedbreaker: 1, // B / Circle
+  camera: 3, // Y / Triangle
+  pause: 9, // Start / Options
+  reset: 8, // Back / Share
+  lookBack: 11, // R3 / Right Stick
+  rumbleEnabled: true,
+  deadzone: 0.15,
+};
+
 const DEFAULT_SETTINGS: GameSettings = {
   resolution: '720p',
   frameRateLimit: 120,
@@ -49,9 +65,10 @@ const DEFAULT_SETTINGS: GameSettings = {
   reflections: 'high',
   audioVolume: 80,
   musicVolume: 75,
-  controllerLayout: 'keyboard_arrows',
+  controllerLayout: 'xbox',
   mobileControls: DEFAULT_MOBILE_SETTINGS,
   keyBindings: DEFAULT_KEY_BINDINGS,
+  controllerBindings: DEFAULT_CONTROLLER_BINDINGS,
   offlinePreload: false,
   backgroundDownloading: true,
 };
@@ -62,16 +79,30 @@ export const App: React.FC = () => {
   const [webGpuSupported, setWebGpuSupported] = useState(false);
   const [webGpuAdapterName, setWebGpuAdapterName] = useState<string | undefined>();
   const [settings, setSettings] = useState<GameSettings>(() => {
+    let initialKey = DEFAULT_KEY_BINDINGS;
     try {
       const savedBinds = localStorage.getItem('nfsmw_keybindings');
-      if (savedBinds) {
-        return {
-          ...DEFAULT_SETTINGS,
-          keyBindings: JSON.parse(savedBinds),
-        };
-      }
+      if (savedBinds) initialKey = JSON.parse(savedBinds);
     } catch {}
-    return DEFAULT_SETTINGS;
+
+    let initialCtrl = DEFAULT_CONTROLLER_BINDINGS;
+    try {
+      const savedCtrl = localStorage.getItem('nfsmw_controller_bindings');
+      if (savedCtrl) initialCtrl = JSON.parse(savedCtrl);
+    } catch {}
+
+    let initialMobile = DEFAULT_MOBILE_SETTINGS;
+    try {
+      const savedMobile = localStorage.getItem('nfsmw_mobile_controls');
+      if (savedMobile) initialMobile = JSON.parse(savedMobile);
+    } catch {}
+
+    return {
+      ...DEFAULT_SETTINGS,
+      keyBindings: initialKey,
+      controllerBindings: initialCtrl,
+      mobileControls: initialMobile,
+    };
   });
   const [mods, setMods] = useState<ModItem[]>([]);
   const [storage, setStorage] = useState<StorageStatus>({
@@ -204,6 +235,42 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleUpdateControllerBindings = (newPartial: Partial<ControllerBindings>) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        controllerBindings: {
+          ...(prev.controllerBindings || DEFAULT_CONTROLLER_BINDINGS),
+          ...newPartial,
+        },
+      };
+      try {
+        localStorage.setItem('nfsmw_controller_bindings', JSON.stringify(updated.controllerBindings));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleReloadSettingsFromStorage = () => {
+    try {
+      const savedKey = localStorage.getItem('nfsmw_keybindings');
+      const savedCtrl = localStorage.getItem('nfsmw_controller_bindings');
+      const savedMobile = localStorage.getItem('nfsmw_mobile_controls');
+      const savedSettings = localStorage.getItem('nfsmw_settings');
+
+      setSettings((prev) => ({
+        ...prev,
+        ...(savedSettings ? JSON.parse(savedSettings) : {}),
+        keyBindings: savedKey ? JSON.parse(savedKey) : prev.keyBindings,
+        controllerBindings: savedCtrl ? JSON.parse(savedCtrl) : prev.controllerBindings,
+        mobileControls: savedMobile ? JSON.parse(savedMobile) : prev.mobileControls,
+      }));
+      setMods(modManager.getMods());
+    } catch (e) {
+      console.warn('Failed reloading settings after backup import:', e);
+    }
+  };
+
   const activeModsCount = mods.filter((m) => m.enabled).length;
 
   return (
@@ -277,8 +344,11 @@ export const App: React.FC = () => {
           <ControlsView
             settings={settings.mobileControls}
             keyBindings={settings.keyBindings}
+            controllerBindings={settings.controllerBindings || DEFAULT_CONTROLLER_BINDINGS}
             onUpdateSettings={handleUpdateMobileSettings}
             onUpdateKeyBindings={handleUpdateKeyBindings}
+            onUpdateControllerBindings={handleUpdateControllerBindings}
+            onReloadAll={handleReloadSettingsFromStorage}
             onLaunchGame={() => handleToggleGame()}
           />
         )}
