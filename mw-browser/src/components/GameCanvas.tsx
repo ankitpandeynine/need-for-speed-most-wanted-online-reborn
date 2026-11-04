@@ -568,6 +568,39 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           />
         </div>
 
+        {/* Mobile Quick Mode Toggle Pill (Seamless Scroll / Drive Mode) */}
+        {isTouchDevice && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTouchControls(!showTouchControls);
+            }}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 70,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              background: showTouchControls ? 'rgba(245, 158, 11, 0.9)' : 'rgba(15, 20, 28, 0.85)',
+              border: `1px solid ${showTouchControls ? '#f59e0b' : '#334155'}`,
+              color: showTouchControls ? '#000' : '#cbd5e1',
+              fontSize: '11.5px',
+              fontWeight: 800,
+              boxShadow: showTouchControls ? '0 0 14px rgba(245, 158, 11, 0.5)' : 'none',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            title="Toggle between Driving Controls and Fullscreen Touch Scroll/Menu Mode"
+          >
+            <Smartphone size={14} color={showTouchControls ? '#000' : '#f59e0b'} />
+            <span>{showTouchControls ? '🎮 Drive Controls: ON' : '👆 Menu Scroll Mode (Tap for Pedals)'}</span>
+          </button>
+        )}
+
         {/* Mobile On-Screen Touch Controls Overlay */}
         {showTouchControls && mobileSettings.enabled && (
           <TouchControls

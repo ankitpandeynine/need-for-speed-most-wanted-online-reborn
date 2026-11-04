@@ -3,6 +3,18 @@
  * Platform Type Definitions
  */
 
+export interface TouchButtonPosition {
+  x: number; // percentage offset from default or -100 to +100 px
+  y: number; // percentage offset from default or -100 to +100 px
+}
+
+export interface TouchCustomPositions {
+  steerCluster?: TouchButtonPosition;
+  pedalsCluster?: TouchButtonPosition;
+  actionsCluster?: TouchButtonPosition;
+  nitroHandbrakeCluster?: TouchButtonPosition;
+}
+
 export interface MobileControlSettings {
   enabled: boolean;
   layout: 'split' | 'dpad' | 'gyro_pedals';
@@ -13,6 +25,7 @@ export interface MobileControlSettings {
   gyroEnabled: boolean;
   gyroSensitivity: number; // 0.5 to 3.0
   gyroDeadzone: number; // 1 to 10 degrees
+  customPositions?: TouchCustomPositions;
 }
 
 export interface KeyBindings {
@@ -57,6 +70,10 @@ export interface ModItem {
   enabled: boolean;
   priority: number;
   assetsCount: number;
+  downloadUrl?: string;
+  fileSize?: number;
+  isInstalled?: boolean;
+  verified?: boolean;
   previewUrl?: string;
   sourceFile?: string;
 }

@@ -696,6 +696,80 @@ h1, h2, h3, h4, .brand-font {
   }
 }
 
+/* =========================================================
+   Universal Responsive Layout & Screen Adaptation
+   (Laptops, Ultrawide Displays, Tablets, Phones, Foldables)
+   ========================================================= */
+
+.page-responsive-container {
+  width: 100%;
+  max-width: min(98vw, 1860px);
+  margin: 0 auto;
+  padding: clamp(14px, 2.2vw, 34px) clamp(12px, 2vw, 30px);
+  box-sizing: border-box;
+}
+
+/* Fluid Responsive Grid Helpers */
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: clamp(14px, 1.8vw, 24px);
+}
+
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: clamp(14px, 1.8vw, 24px);
+}
+
+/* Wide screen / High-DPI Laptop (1440px - 2560px) */
+@media (min-width: 1440px) {
+  .page-responsive-container {
+    padding: 32px 36px;
+  }
+}
+
+/* Tablets (iPad, Galaxy Tab 768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .page-responsive-container {
+    padding: 20px 18px;
+  }
+  .responsive-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Foldables (Unfolded Inner Screen - e.g. Galaxy Z Fold, Pixel Fold, ~1:1 to 4:3 aspect ratio) */
+@media (min-width: 500px) and (max-width: 900px) and (min-aspect-ratio: 4/5) and (max-aspect-ratio: 4/3) {
+  .nfsmw-viewport {
+    height: 58vh;
+  }
+  .page-responsive-container {
+    padding: 16px 14px;
+  }
+  .responsive-grid-3, .responsive-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Compact Foldable Cover Screen / Phones (< 480px) */
+@media (max-width: 480px) {
+  .page-responsive-container {
+    padding: 12px 10px;
+  }
+  .responsive-grid-3, .responsive-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .header-brand .brand-title {
+    font-size: 13.5px;
+  }
+  .header-nav {
+    overflow-x: auto;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 /* Mobile Portrait Mode */
 @media (max-width: 768px) and (orientation: portrait) {
   .nfsmw-viewport {

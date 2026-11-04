@@ -121,8 +121,8 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleToggleMod = (id: string) => {
-    modManager.toggleMod(id);
+  const handleToggleMod = async (id: string) => {
+    await modManager.toggleMod(id);
     setMods(modManager.getMods());
   };
 
@@ -131,24 +131,23 @@ export const App: React.FC = () => {
     setMods(modManager.getMods());
   };
 
-  const handleInstallMod = (file: File) => {
-    const newMod: ModItem = {
-      id: file.name.replace(/\.(mwmod|zip|bin)$/i, '').toLowerCase(),
-      name: file.name.replace(/\.(mwmod|zip|bin)$/i, ''),
-      version: '1.0.0',
-      author: 'Community User Mod',
-      description: 'Imported from local archive into browser VFS.',
-      type: file.name.toLowerCase().includes('car') ? 'vehicle' : 'texture',
-      enabled: true,
-      priority: 70,
-      assetsCount: 8,
-    };
-    modManager.registerMod(newMod);
+  const handleInstallMod = async (file: File) => {
+    try {
+      await modManager.installAndApplyFromBlob(file, undefined, file.name.replace(/\.(mwmod|zip|bin)$/i, ''));
+      setMods(modManager.getMods());
+    } catch (err: any) {
+      console.error('[ModManager] Error installing mod archive:', err);
+      throw err;
+    }
+  };
+
+  const handleEnableAllRecommended = async () => {
+    await modManager.enableAllRecommended();
     setMods(modManager.getMods());
   };
 
-  const handleEnableAllRecommended = () => {
-    modManager.enableAllRecommended();
+  const handleRemoveMod = async (id: string) => {
+    await modManager.removeMod(id);
     setMods(modManager.getMods());
   };
 
@@ -241,6 +240,7 @@ export const App: React.FC = () => {
             onInstallMod={handleInstallMod}
             onEnableAllRecommended={handleEnableAllRecommended}
             onResetDefaults={handleResetModDefaults}
+            onRemoveMod={handleRemoveMod}
           />
         )}
 

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameSettings } from '../types';
-import { Monitor, Volume2, Smartphone } from 'lucide-react';
+import { Monitor, Volume2, Smartphone, Download, CheckCircle2, Folder } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -11,28 +11,147 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onUpdateSettings,
 }) => {
-  const handleUpdateMobile = (partialMobile: Partial<GameSettings['mobileControls']>) => {
-    onUpdateSettings({
-      mobileControls: {
-        ...settings.mobileControls,
-        ...partialMobile,
-      },
-    });
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [installStatus, setInstallStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      (window as any).deferredInstallPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    if ((window as any).deferredInstallPrompt) {
+      setDeferredPrompt((window as any).deferredInstallPrompt);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setInstallStatus('Installed successfully to Home Screen / App Drawer!');
+        } else {
+          setInstallStatus('Installation was dismissed.');
+        }
+        setDeferredPrompt(null);
+      } catch (err: any) {
+        setInstallStatus(`Install prompt error: ${err.message}`);
+      }
+    } else {
+      // In iOS Safari or already installed Chrome
+      const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isIos) {
+        alert('To add NFS Most Wanted to your Home Screen on iOS:\n1. Tap the Share button at the bottom of Safari.\n2. Scroll down and tap "Add to Home Screen".');
+      } else {
+        alert('To install on Chrome / Edge:\nClick the "Install app" icon at the right edge of the address bar (or Menu ⋮ -> "Install Need for Speed").');
+      }
+    }
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="page-responsive-container">
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '6px', letterSpacing: '-0.02em' }}>
-          ENGINE & GRAPHICS CONFIGURATION
+        <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 800, color: '#fff', marginBottom: '6px', letterSpacing: '-0.02em' }}>
+          ENGINE CONFIGURATION & OFFLINE PWA
         </h2>
         <p style={{ color: '#94a3b8', fontSize: '14.5px' }}>
-          Tune rendering resolution, WebGPU graphics pipelines, simulation rates, and controller mappings.
+          Tune WebGPU rendering pipelines, install the progressive web app shortcut, and inspect exact local device file storage.
         </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Graphics Section */}
+        {/* 1. Offline Launch & Home Screen Shortcut Section */}
+        <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '1px solid #273042', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Smartphone size={20} color="#f59e0b" />
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  Add to Home Screen & Offline Web App (PWA)
+                </h3>
+                <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  Install as a standalone native-like app on Chrome, Edge, Android, and iOS for zero-lag offline launch.
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleInstallPwa}
+              className="btn btn-primary"
+              style={{ padding: '10px 22px', fontSize: '13.5px', fontWeight: 800 }}
+            >
+              <Download size={16} fill="#000" />
+              📲 Add Home Screen Shortcut
+            </button>
+          </div>
+
+          {installStatus && (
+            <div style={{ padding: '10px 14px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', fontSize: '13px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={16} />
+              <span>{installStatus}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {/* Background Downloading Toggle */}
+            <div style={{ padding: '16px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
+                  Pre-Download Maps in Background
+                </span>
+                <input
+                  type="checkbox"
+                  checked={settings.backgroundDownloading}
+                  onChange={(e) => onUpdateSettings({ backgroundDownloading: e.target.checked })}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
+                />
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+                Keeps downloading all map sectors and car models in the background while you drive so you never experience download lag or stutters during high-speed police chases.
+              </div>
+            </div>
+
+            {/* Offline Preload Mode Toggle */}
+            <div style={{ padding: '16px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
+                  Full Offline Launch Mode
+                </span>
+                <input
+                  type="checkbox"
+                  checked={settings.offlinePreload}
+                  onChange={(e) => onUpdateSettings({ offlinePreload: e.target.checked })}
+                  style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }}
+                />
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.5 }}>
+                Enforces complete offline caching before game start. The game will boot entirely from local device disk without requiring an active internet connection.
+              </div>
+            </div>
+          </div>
+
+          {/* Local Device Storage Path Card */}
+          <div style={{ marginTop: '16px', padding: '16px', background: '#0d111a', borderRadius: '10px', border: '1px solid #273042' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <Folder size={16} color="#06b6d4" />
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#06b6d4', textTransform: 'uppercase' }}>
+                Device Storage Location (All Game Files Kept Here)
+              </span>
+            </div>
+            <div style={{ fontSize: '12.5px', color: '#cbd5e1', lineHeight: 1.6 }}>
+              <div>• <strong>Virtual Path:</strong> <code style={{ color: '#f59e0b' }}>/opfs/nfsmw/game/</code> (Game Assets) & <code style={{ color: '#f59e0b' }}>/opfs/nfsmw/profile/</code> (Saves)</div>
+              <div>• <strong>macOS Chrome Storage:</strong> <code style={{ color: '#94a3b8' }}>~/Library/Application Support/Google/Chrome/Default/File System/</code></div>
+              <div>• <strong>Windows Chrome Storage:</strong> <code style={{ color: '#94a3b8' }}>%LOCALAPPDATA%\Google\Chrome\User Data\Default\File System\</code></div>
+              <div>• <strong>Android Chrome Storage:</strong> <code style={{ color: '#94a3b8' }}>/data/data/com.android.chrome/app_chrome/Default/File System/</code></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Graphics Section */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px' }}>
             <Monitor size={20} color="#f59e0b" />
@@ -112,96 +231,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* Mobile & Touch Controls Section */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Smartphone size={20} color="#f59e0b" />
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
-                Mobile Touch Controls & Gyroscope
-              </h3>
-            </div>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
-              <input
-                type="checkbox"
-                checked={settings.mobileControls.enabled}
-                onChange={(e) => handleUpdateMobile({ enabled: e.target.checked })}
-                style={{ width: '18px', height: '18px', accentColor: '#f59e0b' }}
-              />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: settings.mobileControls.enabled ? '#f59e0b' : '#64748b' }}>
-                {settings.mobileControls.enabled ? 'ON-SCREEN ACTIVE' : 'OFF'}
-              </span>
-            </label>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
-                <span>Button Size / Scale</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{Math.round(settings.mobileControls.buttonScale * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.8"
-                max="1.5"
-                step="0.05"
-                value={settings.mobileControls.buttonScale}
-                onChange={(e) => handleUpdateMobile({ buttonScale: parseFloat(e.target.value) })}
-                style={{ width: '100%', accentColor: '#f59e0b' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
-                <span>Button Transparency</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{Math.round(settings.mobileControls.opacity * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                min="0.2"
-                max="1.0"
-                step="0.05"
-                value={settings.mobileControls.opacity}
-                onChange={(e) => handleUpdateMobile({ opacity: parseFloat(e.target.value) })}
-                style={{ width: '100%', accentColor: '#f59e0b' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
-                <span>Gyro Tilt Sensitivity</span>
-                <span style={{ color: '#06b6d4', fontWeight: 700 }}>{settings.mobileControls.gyroSensitivity.toFixed(1)}x</span>
-              </div>
-              <input
-                type="range"
-                min="0.5"
-                max="3.0"
-                step="0.1"
-                value={settings.mobileControls.gyroSensitivity}
-                onChange={(e) => handleUpdateMobile({ gyroSensitivity: parseFloat(e.target.value) })}
-                style={{ width: '100%', accentColor: '#06b6d4' }}
-              />
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
-                <span>Gyro Center Deadzone</span>
-                <span style={{ color: '#06b6d4', fontWeight: 700 }}>{settings.mobileControls.gyroDeadzone}°</span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                step="1"
-                value={settings.mobileControls.gyroDeadzone}
-                onChange={(e) => handleUpdateMobile({ gyroDeadzone: parseInt(e.target.value, 10) })}
-                style={{ width: '100%', accentColor: '#06b6d4' }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Sound Section */}
+        {/* 3. Sound Section */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px' }}>
             <Volume2 size={20} color="#10b981" />

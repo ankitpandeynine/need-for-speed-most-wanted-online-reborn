@@ -132,7 +132,7 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+    <div className="page-responsive-container">
       <div style={{ marginBottom: '28px' }}>
         <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '4px', letterSpacing: '-0.02em' }}>
           GAME ASSET STORAGE & OFFLINE CACHE

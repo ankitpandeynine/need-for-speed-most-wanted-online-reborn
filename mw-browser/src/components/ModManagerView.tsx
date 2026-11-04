@@ -13,18 +13,22 @@ import {
   Car,
   Sliders,
   Flame,
-  Volume2,
-  Tv,
   CheckCircle2,
+  HardDrive,
+  Download,
+  AlertCircle,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 
 interface ModManagerViewProps {
   mods: ModItem[];
-  onToggleMod: (id: string) => void;
+  onToggleMod: (id: string) => Promise<void> | void;
   onUpdatePriority: (id: string, newPriority: number) => void;
-  onInstallMod: (file: File) => void;
-  onEnableAllRecommended?: () => void;
+  onInstallMod: (file: File) => Promise<void> | void;
+  onEnableAllRecommended?: () => Promise<void> | void;
   onResetDefaults?: () => void;
+  onRemoveMod?: (id: string) => Promise<void> | void;
 }
 
 export const ModManagerView: React.FC<ModManagerViewProps> = ({
@@ -34,26 +38,36 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
   onInstallMod,
   onEnableAllRecommended,
   onResetDefaults,
+  onRemoveMod,
 }) => {
   const [dragOver, setDragOver] = useState(false);
   const [installSuccess, setInstallSuccess] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [modUrl, setModUrl] = useState('');
-  const [urlDownloading, setUrlDownloading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       if (file.name.endsWith('.mwmod') || file.name.endsWith('.zip') || file.name.endsWith('.bin')) {
-        onInstallMod(file);
-        setInstallSuccess(`Successfully installed "${file.name}"!`);
-        setTimeout(() => setInstallSuccess(null), 4000);
+        try {
+          setIsProcessing(file.name);
+          await onInstallMod(file);
+          setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
+          setTimeout(() => setInstallSuccess(null), 4000);
+        } catch (err: any) {
+          setErrorMessage(`Failed to install archive: ${err.message}`);
+          setTimeout(() => setErrorMessage(null), 5000);
+        } finally {
+          setIsProcessing(null);
+        }
       } else {
-        alert('Please drop a .mwmod, .zip, or .bin mod archive from NFSMods or NexusMods.');
+        alert('Please drop a valid .mwmod or .zip mod archive.');
       }
     }
   };
@@ -61,21 +75,34 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
   const handleInstallFromUrl = async () => {
     if (!modUrl.trim()) return;
     try {
-      setUrlDownloading(true);
+      setIsProcessing('Downloading URL…');
       const res = await fetch(modUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to fetch mod file`);
       const blob = await res.blob();
-      const fileName = modUrl.split('/').pop()?.split('?')[0] || 'community-mod.zip';
+      const fileName = modUrl.split('/').pop()?.split('?')[0] || 'custom-mod.zip';
       const file = new File([blob], fileName);
-      onInstallMod(file);
-      setUrlDownloading(false);
+      await onInstallMod(file);
       setShowUrlModal(false);
       setModUrl('');
-      setInstallSuccess(`Successfully downloaded and installed "${fileName}"!`);
+      setInstallSuccess(`Successfully downloaded and applied "${fileName}" to OPFS!`);
       setTimeout(() => setInstallSuccess(null), 4000);
     } catch (err: any) {
-      alert(`Could not download mod: ${err.message}. Make sure the URL allows CORS.`);
-      setUrlDownloading(false);
+      setErrorMessage(`Could not download mod: ${err.message}. Make sure the host supports CORS.`);
+      setTimeout(() => setErrorMessage(null), 6000);
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleToggle = async (id: string) => {
+    try {
+      setIsProcessing(id);
+      await onToggleMod(id);
+    } catch (err: any) {
+      setErrorMessage(`Failed to toggle mod: ${err.message}`);
+      setTimeout(() => setErrorMessage(null), 5000);
+    } finally {
+      setIsProcessing(null);
     }
   };
 
@@ -86,39 +113,32 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
       mod.author.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
-
     if (categoryFilter === 'all') return true;
     if (categoryFilter === 'graphics') return mod.type === 'texture';
-    if (categoryFilter === 'vehicles') return mod.type === 'vehicle';
-    if (categoryFilter === 'gameplay') return mod.type === 'options' || mod.type === 'police';
+    if (categoryFilter === 'options') return mod.type === 'options';
     if (categoryFilter === 'handling') return mod.type === 'handling';
-    if (categoryFilter === 'audio_video') return mod.type === 'composite' || mod.id.includes('ea-trax') || mod.id.includes('cutscenes');
+    if (categoryFilter === 'vehicles') return mod.type === 'vehicle';
     return true;
   });
 
   const activeCount = mods.filter((m) => m.enabled).length;
 
-  const getTypeIcon = (type: string, id: string) => {
-    if (id.includes('ea-trax')) return <Volume2 size={14} color="#10b981" />;
-    if (id.includes('cutscenes')) return <Tv size={14} color="#3b82f6" />;
+  const getTypeIcon = (type: string) => {
     if (type === 'texture') return <Sparkles size={14} color="#06b6d4" />;
     if (type === 'vehicle') return <Car size={14} color="#f59e0b" />;
     if (type === 'handling') return <Flame size={14} color="#ef4444" />;
     return <Sliders size={14} color="#a855f7" />;
   };
 
-  const getTypeLabel = (type: string, id: string) => {
-    if (id.includes('ea-trax')) return 'Audio Remaster';
-    if (id.includes('cutscenes')) return '60 FPS Video';
-    if (type === 'texture') return 'Visuals / Textures';
-    if (type === 'vehicle') return 'Vehicle Pack';
+  const getTypeLabel = (type: string) => {
+    if (type === 'texture') return 'Visuals / Shaders';
+    if (type === 'vehicle') return 'Vehicle Slot';
     if (type === 'handling') return 'Physics / Drift';
-    if (type === 'police') return 'Police AI';
-    return 'Core Option';
+    return 'Core Engine INI';
   };
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="page-responsive-container">
       {/* Top Banner */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -136,27 +156,28 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
           >
             <Sparkles size={14} color="#f59e0b" />
             <span style={{ fontSize: '12px', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              One-Click In-Browser Modding
+              Real OPFS Mod Engine
             </span>
           </div>
-          <h2 style={{ fontSize: '30px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 34px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>
             COMMUNITY MOD WORKSHOP
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '14.5px', marginTop: '6px' }}>
-            <span style={{ color: '#10b981', fontWeight: 700 }}>{activeCount} of {mods.length} mods active</span> • Layered Virtual File System (VFS) dynamically overrides game assets at runtime.
+            <span style={{ color: '#10b981', fontWeight: 700 }}>{activeCount} of {mods.length} real mods active</span> • Files write directly to OPFS <code style={{ color: '#f59e0b', background: '#171d2b', padding: '2px 6px', borderRadius: '4px' }}>/opfs/nfsmw/game/</code> with automatic backup & restore.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {onEnableAllRecommended && (
             <button
-              onClick={onEnableAllRecommended}
+              onClick={() => onEnableAllRecommended()}
+              disabled={!!isProcessing}
               className="btn btn-primary"
               style={{ fontSize: '13px', padding: '10px 18px', fontWeight: 800 }}
-              title="Enables ThirteenAG Widescreen, Xbox 360 Visuals, 4K HUD, and Extra Options with 1 click"
+              title="Enables ThirteenAG Widescreen, Xbox 360 Visuals, 4K Redux, and Extra Options with 1 click"
             >
               <Sparkles size={15} fill="#000" />
-              1-Click Install Recommended Pack
+              1-Click Recommended Pack
             </button>
           )}
 
@@ -177,11 +198,20 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
               type="file"
               accept=".mwmod,.zip,.bin"
               style={{ display: 'none' }}
-              onChange={(e) => {
+              onChange={async (e) => {
                 if (e.target.files && e.target.files[0]) {
-                  onInstallMod(e.target.files[0]);
-                  setInstallSuccess(`Successfully installed "${e.target.files[0].name}"!`);
-                  setTimeout(() => setInstallSuccess(null), 4000);
+                  const file = e.target.files[0];
+                  try {
+                    setIsProcessing(file.name);
+                    await onInstallMod(file);
+                    setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
+                    setTimeout(() => setInstallSuccess(null), 4000);
+                  } catch (err: any) {
+                    setErrorMessage(`Failed to install archive: ${err.message}`);
+                    setTimeout(() => setErrorMessage(null), 5000);
+                  } finally {
+                    setIsProcessing(null);
+                  }
                 }
               }}
             />
@@ -192,7 +222,7 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
               onClick={onResetDefaults}
               className="btn btn-secondary"
               style={{ fontSize: '13px', padding: '10px 14px' }}
-              title="Reset catalog back to community defaults"
+              title="Reset catalog back to verified defaults"
             >
               <RefreshCw size={14} />
             </button>
@@ -207,13 +237,20 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
         </div>
       )}
 
+      {errorMessage && (
+        <div style={{ padding: '14px 20px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', borderRadius: '10px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', fontWeight: 700 }}>
+          <AlertCircle size={18} />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* URL Install Modal */}
       {showUrlModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.8)',
+            background: 'rgba(0, 0, 0, 0.85)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -224,18 +261,18 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
         >
           <div
             className="glass-panel"
-            style={{ maxWidth: '520px', width: '100%', padding: '28px', background: '#121622', border: '1px solid #273042' }}
+            style={{ maxWidth: '540px', width: '100%', padding: '28px', background: '#121622', border: '1px solid #273042' }}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
               Install Mod from Direct URL
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
-              Enter a direct link to a `.zip` or `.mwmod` file hosted on GitHub, NFSMods, or any web server.
+              Enter a direct link to a `.zip` or `.mwmod` archive. Files will be downloaded, verified, and written into OPFS.
             </p>
             <input
               type="text"
-              placeholder="https://example.com/mods/my-car-mod.zip"
+              placeholder="https://example.com/mods/my-mod.zip"
               value={modUrl}
               onChange={(e) => setModUrl(e.target.value)}
               style={{
@@ -250,23 +287,24 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button onClick={() => setShowUrlModal(false)} className="btn btn-secondary" style={{ padding: '8px 18px' }}>
+              <button onClick={() => setShowUrlModal(false)} className="btn btn-secondary" style={{ padding: '8px 16px' }}>
                 Cancel
               </button>
               <button
                 onClick={handleInstallFromUrl}
-                disabled={urlDownloading || !modUrl.trim()}
+                disabled={!modUrl.trim() || !!isProcessing}
                 className="btn btn-primary"
-                style={{ padding: '8px 22px', fontWeight: 800 }}
+                style={{ padding: '8px 20px', fontWeight: 800 }}
               >
-                {urlDownloading ? 'Downloading...' : 'Download & Install'}
+                {isProcessing ? <Loader2 size={15} className="spin-anim" /> : <Download size={15} />}
+                Download & Apply
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Drag & Drop Mod Installer Zone */}
+      {/* Drag & Drop Target Area */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -276,53 +314,35 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
         onDrop={handleDrop}
         style={{
           border: `2px dashed ${dragOver ? '#f59e0b' : '#273042'}`,
-          borderRadius: '16px',
-          padding: '28px',
+          borderRadius: '12px',
+          padding: '24px 20px',
           textAlign: 'center',
-          background: dragOver ? 'rgba(245, 158, 11, 0.08)' : 'rgba(15, 20, 28, 0.6)',
+          background: dragOver ? 'rgba(245, 158, 11, 0.05)' : 'rgba(18, 22, 32, 0.4)',
           marginBottom: '28px',
           transition: 'all 0.2s ease',
-          cursor: 'pointer',
-        }}
-        onClick={() => {
-          const fileInput = document.getElementById('drag-drop-mod-input');
-          fileInput?.click();
         }}
       >
-        <Upload size={32} color={dragOver ? '#f59e0b' : '#64748b'} style={{ margin: '0 auto 12px' }} />
-        <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
-          Drag & Drop Community Mods Here
+        <Upload size={28} color={dragOver ? '#f59e0b' : '#64748b'} style={{ margin: '0 auto 10px' }} />
+        <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
+          Drop any .mwmod or .zip Mod Package here
         </div>
-        <div style={{ fontSize: '13px', color: '#94a3b8' }}>
-          Supports <span style={{ color: '#f59e0b' }}>.mwmod</span>, <span style={{ color: '#06b6d4' }}>.zip</span>, and <span style={{ color: '#10b981' }}>.bin</span> mod archives from NFSMods, NFSAddons, and NexusMods.
+        <div style={{ fontSize: '12.5px', color: '#94a3b8', marginTop: '4px' }}>
+          Native Web Streams extraction writes directly to <code style={{ color: '#06b6d4' }}>/opfs/nfsmw/game/</code> with zero server dependency.
         </div>
-        <input
-          id="drag-drop-mod-input"
-          type="file"
-          accept=".mwmod,.zip,.bin"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              onInstallMod(e.target.files[0]);
-              setInstallSuccess(`Successfully installed "${e.target.files[0].name}"!`);
-              setTimeout(() => setInstallSuccess(null), 4000);
-            }
-          }}
-        />
       </div>
 
-      {/* Filter & Search Bar */}
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap' }}>
+      {/* Filter and Search Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-          <Search size={16} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+          <Search size={16} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
-            placeholder="Search mods by name, author, or feature..."
+            placeholder="Search verified mods by name, author, or feature..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%',
-              padding: '10px 14px 10px 40px',
+              padding: '10px 14px 10px 38px',
               background: '#121622',
               border: '1px solid #273042',
               borderRadius: '8px',
@@ -332,29 +352,26 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
           />
         </div>
 
-        {/* Category Pills */}
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: 'All Mods' },
-            { id: 'graphics', label: 'Graphics & Textures' },
-            { id: 'vehicles', label: 'Vehicles & JDM' },
-            { id: 'gameplay', label: 'Gameplay & Scripts' },
+            { id: 'graphics', label: 'Visuals & Redux' },
+            { id: 'options', label: 'Options & FOV' },
             { id: 'handling', label: 'Physics & Drift' },
-            { id: 'audio_video', label: 'Audio & Cinematics' },
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => setCategoryFilter(cat.id)}
-              className="btn"
               style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: categoryFilter === cat.id ? '#f59e0b' : '#273042',
+                background: categoryFilter === cat.id ? 'rgba(245, 158, 11, 0.15)' : '#121622',
+                color: categoryFilter === cat.id ? '#f59e0b' : '#94a3b8',
                 fontSize: '12.5px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                background: categoryFilter === cat.id ? '#f59e0b' : '#121622',
-                color: categoryFilter === cat.id ? '#000' : '#94a3b8',
                 fontWeight: 700,
-                border: categoryFilter === cat.id ? '1px solid #f59e0b' : '1px solid #232b3c',
-                whiteSpace: 'nowrap',
+                cursor: 'pointer',
               }}
             >
               {cat.label}
@@ -363,128 +380,168 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
         </div>
       </div>
 
-      {/* Mod Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '18px' }}>
-        {filteredMods.map((mod) => (
-          <div
-            key={mod.id}
-            className="glass-panel"
-            style={{
-              padding: '22px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              border: mod.enabled ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid #232b3c',
-              background: mod.enabled ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(18, 22, 32, 0.95) 100%)' : '#10141d',
-              borderRadius: '14px',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div>
-              {/* Header: Type Pill & Version */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    color: '#cbd5e1',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {getTypeIcon(mod.type, mod.id)}
-                  {getTypeLabel(mod.type, mod.id)}
-                </span>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>v{mod.version}</span>
+      {/* Mods Grid */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+          gap: '18px',
+        }}
+      >
+        {filteredMods.map((mod) => {
+          const isBusy = isProcessing === mod.id;
+          return (
+            <div
+              key={mod.id}
+              className="glass-panel"
+              style={{
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: `1px solid ${mod.enabled ? 'rgba(245, 158, 11, 0.4)' : '#273042'}`,
+                background: mod.enabled
+                  ? 'linear-gradient(145deg, rgba(20, 26, 38, 0.95) 0%, rgba(13, 17, 24, 0.95) 100%)'
+                  : 'rgba(15, 19, 28, 0.6)',
+                boxShadow: mod.enabled ? '0 4px 20px rgba(245, 158, 11, 0.08)' : 'none',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
                       fontSize: '11px',
                       fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                      background: mod.enabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                      color: mod.enabled ? '#10b981' : '#64748b',
+                      textTransform: 'uppercase',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: '#cbd5e1',
                     }}
                   >
-                    {mod.enabled ? 'ACTIVE' : 'OFF'}
+                    {getTypeIcon(mod.type)}
+                    {getTypeLabel(mod.type)}
                   </span>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>v{mod.version}</span>
+                    {mod.verified && (
+                      <span
+                        title="Verified authentic mod for NFS Most Wanted 2005"
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          color: '#10b981',
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        VERIFIED
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#fff', marginBottom: '6px', letterSpacing: '-0.01em' }}>
+                  {mod.name}
+                </h3>
+
+                <div style={{ fontSize: '11.5px', color: '#f59e0b', fontWeight: 700, marginBottom: '8px' }}>
+                  by {mod.author}
+                </div>
+
+                <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
+                  {mod.description}
+                </p>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderTop: '1px solid #1f2737', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#64748b' }}>
+                    <HardDrive size={13} />
+                    <span>{mod.assetsCount} OPFS File Overrides</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>Priority</span>
+                    <button
+                      onClick={() => onUpdatePriority(mod.id, mod.priority + 5)}
+                      className="nfsmw-hud-btn"
+                      style={{ padding: '2px 6px' }}
+                      title="Increase priority order"
+                    >
+                      <ArrowUp size={11} />
+                    </button>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#fff', minWidth: '22px', textAlign: 'center' }}>
+                      {mod.priority}
+                    </span>
+                    <button
+                      onClick={() => onUpdatePriority(mod.id, Math.max(1, mod.priority - 5))}
+                      className="nfsmw-hud-btn"
+                      style={{ padding: '2px 6px' }}
+                      title="Decrease priority order"
+                    >
+                      <ArrowDown size={11} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleToggle(mod.id)}
+                    disabled={isBusy}
+                    className="btn"
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '8px 14px',
+                      fontSize: '12.5px',
+                      fontWeight: 800,
+                      background: mod.enabled ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      border: `1px solid ${mod.enabled ? '#ef4444' : '#10b981'}`,
+                      color: mod.enabled ? '#ef4444' : '#10b981',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isBusy ? (
+                      <Loader2 size={14} className="spin-anim" />
+                    ) : mod.enabled ? (
+                      <>
+                        <Power size={14} />
+                        <span>Disable Mod (Revert to Clean)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Enable Mod (Apply to OPFS)</span>
+                      </>
+                    )}
+                  </button>
+
+                  {onRemoveMod && !mod.verified && (
+                    <button
+                      onClick={() => onRemoveMod(mod.id)}
+                      className="btn btn-secondary"
+                      style={{ padding: '8px 12px', borderColor: '#ef4444', color: '#ef4444' }}
+                      title="Remove custom mod"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Title & Author */}
-              <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#fff', margin: '0 0 6px 0', lineHeight: 1.3 }}>
-                {mod.name}
-              </h4>
-              <div style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600, marginBottom: '10px' }}>
-                by {mod.author}
-              </div>
-
-              {/* Description */}
-              <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '18px' }}>
-                {mod.description}
-              </p>
             </div>
-
-            {/* Bottom Actions: Toggle & Priority */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #1e2533', paddingTop: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Priority:</span>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#06b6d4' }}>{mod.priority}</span>
-                <button
-                  onClick={() => onUpdatePriority(mod.id, mod.priority + 5)}
-                  className="btn"
-                  style={{ padding: '3px 6px', background: '#1c2333', color: '#cbd5e1', borderRadius: '4px' }}
-                  title="Increase priority in VFS layer"
-                >
-                  <ArrowUp size={12} />
-                </button>
-                <button
-                  onClick={() => onUpdatePriority(mod.id, mod.priority - 5)}
-                  className="btn"
-                  style={{ padding: '3px 6px', background: '#1c2333', color: '#cbd5e1', borderRadius: '4px' }}
-                  title="Decrease priority in VFS layer"
-                >
-                  <ArrowDown size={12} />
-                </button>
-              </div>
-
-              {/* 1-Click Install/Toggle Button */}
-              <button
-                onClick={() => onToggleMod(mod.id)}
-                className="btn"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '12.5px',
-                  fontWeight: 800,
-                  borderRadius: '8px',
-                  background: mod.enabled ? 'rgba(239, 68, 68, 0.15)' : '#f59e0b',
-                  color: mod.enabled ? '#f87171' : '#000',
-                  border: mod.enabled ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid #f59e0b',
-                  boxShadow: !mod.enabled ? '0 0 14px rgba(245, 158, 11, 0.3)' : 'none',
-                }}
-              >
-                {mod.enabled ? (
-                  <>
-                    <Power size={13} />
-                    <span>Disable</span>
-                  </>
-                ) : (
-                  <>
-                    <Check size={14} />
-                    <span>Install & Enable</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

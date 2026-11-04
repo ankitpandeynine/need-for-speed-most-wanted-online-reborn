@@ -365,6 +365,8 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
               display: 'flex',
               gap: `${14 * scale}px`,
               pointerEvents: 'auto',
+              transform: `translate(${settings.customPositions?.steerCluster?.x || 0}px, ${settings.customPositions?.steerCluster?.y || 0}px)`,
+              transition: 'transform 0.1s ease-out',
             }}
           >
             {/* Steer Left */}
@@ -397,7 +399,12 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           </div>
         ) : (
           /* Gyro Active placeholder with Handbrake */
-          <div style={{ pointerEvents: 'auto' }}>
+          <div
+            style={{
+              pointerEvents: 'auto',
+              transform: `translate(${settings.customPositions?.steerCluster?.x || 0}px, ${settings.customPositions?.steerCluster?.y || 0}px)`,
+            }}
+          >
             <button
               {...touchProps(' ', 'Space', 32)}
               className={`nfsmw-touch-pad-btn handbrake-btn ${activeKeys.has('Space') ? 'pressed' : ''}`}
@@ -421,10 +428,19 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
             alignItems: 'flex-end',
             gap: `${14 * scale}px`,
             pointerEvents: 'auto',
+            transform: `translate(${settings.customPositions?.pedalsCluster?.x || 0}px, ${settings.customPositions?.pedalsCluster?.y || 0}px)`,
+            transition: 'transform 0.1s ease-out',
           }}
         >
           {/* Nitrous (NOS) & Handbrake Vertical Stack */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: `${10 * scale}px` }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: `${10 * scale}px`,
+              transform: `translate(${settings.customPositions?.nitroHandbrakeCluster?.x || 0}px, ${settings.customPositions?.nitroHandbrakeCluster?.y || 0}px)`,
+            }}
+          >
             {/* Nitrous Button (Cyan Glow) */}
             <button
               {...touchProps('Shift', 'ShiftLeft', 16)}

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MobileControlSettings, KeyBindings } from '../types';
+import { MobileControlSettings, KeyBindings, TouchCustomPositions } from '../types';
 import {
   Smartphone,
   Compass,
-  Sparkles,
   ArrowUp,
   ArrowDown,
   ArrowLeft,
@@ -13,8 +12,8 @@ import {
   RotateCcw,
   Keyboard,
   Vibrate,
-  Gamepad2,
   CheckCircle2,
+  Move,
 } from 'lucide-react';
 
 interface ControlsViewProps {
@@ -47,36 +46,45 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
 }) => {
   const [gyroTestedAngle, setGyroTestedAngle] = useState<number>(0);
   const [gyroActiveDirection, setGyroActiveDirection] = useState<'center' | 'left' | 'right'>('center');
-  const [testPressedKey, setTestPressedKey] = useState<string | null>(null);
   const [calibratedNotice, setCalibratedNotice] = useState(false);
+  const [positionsSavedNotice, setPositionsSavedNotice] = useState(false);
 
   // Rebinding state
   const [rebindingAction, setRebindingAction] = useState<keyof KeyBindings | null>(null);
 
-  // Live Gamepad Connection
-  const [gamepadInfo, setGamepadInfo] = useState<{ id: string; buttons: boolean[]; axes: number[] } | null>(null);
+  // Custom Placement state
+  const customPos = settings.customPositions || {
+    steerCluster: { x: 0, y: 0 },
+    pedalsCluster: { x: 0, y: 0 },
+    nitroHandbrakeCluster: { x: 0, y: 0 },
+  };
 
-  useEffect(() => {
-    let animId: number;
-    const poll = () => {
-      if (typeof navigator !== 'undefined' && navigator.getGamepads) {
-        const gps = navigator.getGamepads();
-        const active = Array.from(gps).find((g) => g !== null);
-        if (active) {
-          setGamepadInfo({
-            id: active.id,
-            buttons: active.buttons.map((b) => b.pressed || b.value > 0.2),
-            axes: Array.from(active.axes).map((a) => Math.round(a * 100) / 100),
-          });
-        } else {
-          setGamepadInfo(null);
-        }
-      }
-      animId = requestAnimationFrame(poll);
+  const updateClusterPos = (
+    cluster: 'steerCluster' | 'pedalsCluster' | 'nitroHandbrakeCluster',
+    axis: 'x' | 'y',
+    val: number
+  ) => {
+    const updated: TouchCustomPositions = {
+      ...customPos,
+      [cluster]: {
+        ...(customPos[cluster] || { x: 0, y: 0 }),
+        [axis]: val,
+      },
     };
-    animId = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(animId);
-  }, []);
+    onUpdateSettings({ customPositions: updated });
+    setPositionsSavedNotice(true);
+    setTimeout(() => setPositionsSavedNotice(false), 2000);
+  };
+
+  const resetClusterPositions = () => {
+    onUpdateSettings({
+      customPositions: {
+        steerCluster: { x: 0, y: 0 },
+        pedalsCluster: { x: 0, y: 0 },
+        nitroHandbrakeCluster: { x: 0, y: 0 },
+      },
+    });
+  };
 
   // Key rebinding listener
   useEffect(() => {
@@ -139,16 +147,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
     setTimeout(() => setCalibratedNotice(false), 2000);
   };
 
-  const triggerTestPress = (keyName: string) => {
-    setTestPressedKey(keyName);
-    if (settings.haptics && navigator.vibrate) {
-      try {
-        navigator.vibrate(20);
-      } catch {}
-    }
-    setTimeout(() => setTestPressedKey(null), 250);
-  };
-
   const handleResetKeyBindings = () => {
     const defaults: KeyBindings = {
       accelerate: 'ArrowUp',
@@ -166,7 +164,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="page-responsive-container">
       {/* Page Title */}
       <div style={{ marginBottom: '28px' }}>
         <div
@@ -183,18 +181,246 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         >
           <Keyboard size={14} color="#f59e0b" />
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            PC Keybindings • Controllers • Mobile Gyro
+            PC Keybindings • Controllers • Mobile Gyro & Touch Customizer
           </span>
         </div>
-        <h2 style={{ fontSize: '30px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>
+        <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 34px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', margin: 0 }}>
           CONTROLS & HARDWARE INPUT
         </h2>
         <p style={{ color: '#94a3b8', fontSize: '15px', marginTop: '6px' }}>
-          Customize your keyboard bindings, plug in any Xbox or PlayStation controller, or configure mobile on-screen pedals and gyroscope steering.
+          Rebind PC keys, connect Xbox / PlayStation gamepads, or customize mobile touch button placements with drag & offset controls.
         </p>
       </div>
 
-      {/* 1. PC Keyboard Keybindings Card */}
+      {/* 1. Mobile Touch Screen Placement Customizer */}
+      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid #273042', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Move size={20} color="#f59e0b" />
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', margin: 0 }}>
+                Touch Screen Controls & Custom Placement
+              </h3>
+              <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                Adjust the on-screen button positions and offsets to fit your phone, tablet, or foldable screen.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {positionsSavedNotice && (
+              <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle2 size={14} /> Saved Live
+              </span>
+            )}
+            <button
+              onClick={resetClusterPositions}
+              className="btn btn-secondary"
+              style={{ padding: '6px 14px', fontSize: '12px' }}
+            >
+              Reset Positions
+            </button>
+          </div>
+        </div>
+
+        {/* Interactive Virtual Device Screen Mockup */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '240px',
+            background: 'radial-gradient(ellipse at center, #171d2b 0%, #0a0c12 100%)',
+            border: '2px solid #273042',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {/* Faint road perspective in background */}
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.15, pointerEvents: 'none', background: 'repeating-linear-gradient(0deg, #334155, #334155 1px, transparent 1px, transparent 40px)' }} />
+
+          <div style={{ position: 'absolute', top: '12px', left: '16px', fontSize: '11px', color: '#64748b', fontWeight: 700 }}>
+            LIVE SCREEN PREVIEW (LANDSCAPE)
+          </div>
+
+          {/* Steer Cluster Preview */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '20px',
+              left: `${20 + (customPos.steerCluster?.x || 0)}px`,
+              transform: `translateY(${-(customPos.steerCluster?.y || 0)}px)`,
+              display: 'flex',
+              gap: '8px',
+              padding: '6px',
+              background: 'rgba(245, 158, 11, 0.1)',
+              border: '1px dashed #f59e0b',
+              borderRadius: '12px',
+              transition: 'all 0.1s ease-out',
+            }}
+          >
+            <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#1c2333', border: '1px solid #f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+              <ArrowLeft size={18} />
+            </div>
+            <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#1c2333', border: '1px solid #f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+              <ArrowRight size={18} />
+            </div>
+          </div>
+
+          {/* Nitro & Handbrake Preview */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '20px',
+              right: `${120 - (customPos.nitroHandbrakeCluster?.x || 0)}px`,
+              transform: `translateY(${-(customPos.nitroHandbrakeCluster?.y || 0)}px)`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              padding: '6px',
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '1px dashed #06b6d4',
+              borderRadius: '10px',
+              transition: 'all 0.1s ease-out',
+            }}
+          >
+            <div style={{ width: '38px', height: '32px', borderRadius: '8px', background: '#1c2333', border: '1px solid #06b6d4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06b6d4' }}>
+              <Flame size={14} />
+            </div>
+            <div style={{ width: '38px', height: '28px', borderRadius: '8px', background: '#1c2333', border: '1px solid #94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
+              <CircleDot size={12} />
+            </div>
+          </div>
+
+          {/* Pedals Cluster Preview */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '20px',
+              right: `${20 - (customPos.pedalsCluster?.x || 0)}px`,
+              transform: `translateY(${-(customPos.pedalsCluster?.y || 0)}px)`,
+              display: 'flex',
+              gap: '8px',
+              padding: '6px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px dashed #10b981',
+              borderRadius: '12px',
+              transition: 'all 0.1s ease-out',
+            }}
+          >
+            <div style={{ width: '38px', height: '46px', borderRadius: '10px', background: '#1c2333', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+              <ArrowDown size={18} />
+            </div>
+            <div style={{ width: '38px', height: '52px', borderRadius: '10px', background: '#1c2333', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+              <ArrowUp size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Position Offset Sliders Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          {/* Steering Position */}
+          <div style={{ padding: '14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Steering Cluster (Left/Right)</span>
+              <span>X: {customPos.steerCluster?.x || 0}px | Y: {customPos.steerCluster?.y || 0}px</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Horizontal Offset (X)</span>
+                <input
+                  type="range"
+                  min="-60"
+                  max="80"
+                  value={customPos.steerCluster?.x || 0}
+                  onChange={(e) => updateClusterPos('steerCluster', 'x', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#f59e0b' }}
+                />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Vertical Offset (Y)</span>
+                <input
+                  type="range"
+                  min="-40"
+                  max="60"
+                  value={customPos.steerCluster?.y || 0}
+                  onChange={(e) => updateClusterPos('steerCluster', 'y', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#f59e0b' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Pedals Position */}
+          <div style={{ padding: '14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Drive Pedals (Gas & Brake)</span>
+              <span>X: {customPos.pedalsCluster?.x || 0}px | Y: {customPos.pedalsCluster?.y || 0}px</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Horizontal Offset (X)</span>
+                <input
+                  type="range"
+                  min="-80"
+                  max="60"
+                  value={customPos.pedalsCluster?.x || 0}
+                  onChange={(e) => updateClusterPos('pedalsCluster', 'x', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#10b981' }}
+                />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Vertical Offset (Y)</span>
+                <input
+                  type="range"
+                  min="-40"
+                  max="60"
+                  value={customPos.pedalsCluster?.y || 0}
+                  onChange={(e) => updateClusterPos('pedalsCluster', 'y', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#10b981' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Nitro & Handbrake Position */}
+          <div style={{ padding: '14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#06b6d4', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Action Cluster (NOS & E-Brake)</span>
+              <span>X: {customPos.nitroHandbrakeCluster?.x || 0}px | Y: {customPos.nitroHandbrakeCluster?.y || 0}px</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Horizontal Offset (X)</span>
+                <input
+                  type="range"
+                  min="-80"
+                  max="60"
+                  value={customPos.nitroHandbrakeCluster?.x || 0}
+                  onChange={(e) => updateClusterPos('nitroHandbrakeCluster', 'x', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#06b6d4' }}
+                />
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>Vertical Offset (Y)</span>
+                <input
+                  type="range"
+                  min="-40"
+                  max="60"
+                  value={customPos.nitroHandbrakeCluster?.y || 0}
+                  onChange={(e) => updateClusterPos('nitroHandbrakeCluster', 'y', parseInt(e.target.value, 10))}
+                  style={{ width: '100%', accentColor: '#06b6d4' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. PC Keyboard Keybindings Card */}
       <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -229,7 +455,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
               color: '#f59e0b',
               fontWeight: 800,
               textAlign: 'center',
-              animation: 'pulse 1.5s infinite',
             }}
           >
             👉 Press any key on your keyboard now to assign to "{ACTION_LABELS.find((a) => a.id === rebindingAction)?.label}"...
@@ -248,11 +473,10 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   background: isRebinding ? 'rgba(245, 158, 11, 0.12)' : '#121622',
+                  border: `1px solid ${isRebinding ? '#f59e0b' : '#273042'}`,
                   borderRadius: '10px',
-                  border: isRebinding ? '1px solid #f59e0b' : '1px solid #232b3c',
-                  transition: 'all 0.15s ease',
                 }}
               >
                 <div>
@@ -262,21 +486,23 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
 
                 <button
                   onClick={() => setRebindingAction(item.id)}
-                  className="btn"
                   style={{
-                    background: isRebinding ? '#f59e0b' : '#1e2638',
-                    color: isRebinding ? '#000' : '#f59e0b',
-                    fontWeight: 800,
-                    fontSize: '12px',
-                    padding: '6px 14px',
+                    padding: '6px 12px',
                     borderRadius: '6px',
-                    border: '1px solid #334155',
-                    minWidth: '80px',
+                    border: '1px solid',
+                    borderColor: isRebinding ? '#f59e0b' : '#334155',
+                    background: isRebinding ? '#f59e0b' : '#1e2638',
+                    color: isRebinding ? '#000' : '#f8fafc',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    minWidth: '70px',
                     textAlign: 'center',
                   }}
-                  title="Click to rebind this key"
+                  title="Click to rebind"
                 >
-                  {isRebinding ? 'PRESS KEY' : currentCode}
+                  {isRebinding ? 'PRESS KEY' : currentCode.replace('Key', '').replace('Arrow', '')}
                 </button>
               </div>
             );
@@ -284,92 +510,15 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Controller & Gamepad Connectivity Card */}
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Gamepad2 size={20} color="#06b6d4" />
-            <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
-                Controller & Gamepad Connectivity
-              </h3>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>
-                Full native Gamepad API support for Xbox, PlayStation DualSense / DualShock, and Bluetooth controllers.
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {gamepadInfo ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', fontSize: '13px', fontWeight: 800 }}>
-                <CheckCircle2 size={16} color="#10b981" />
-                CONTROLLER CONNECTED
-              </span>
-            ) : (
-              <span style={{ color: '#64748b', fontSize: '13px' }}>
-                Connect a USB or Bluetooth gamepad to test
-              </span>
-            )}
-          </div>
-        </div>
-
-        {gamepadInfo ? (
-          <div style={{ padding: '16px', background: 'rgba(6, 182, 212, 0.08)', borderRadius: '12px', border: '1px solid rgba(6, 182, 212, 0.25)', marginBottom: '20px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
-              🎮 Device: <span style={{ color: '#06b6d4' }}>{gamepadInfo.id}</span>
-            </div>
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-              Live Triggers & Sticks: Steering Axis ({gamepadInfo.axes[0] || 0}) • Accelerate RT ({gamepadInfo.buttons[7] ? 'Pressed' : 'Off'}) • Brake LT ({gamepadInfo.buttons[6] ? 'Pressed' : 'Off'})
-            </div>
-          </div>
-        ) : null}
-
-        {/* Standard Layout Reference Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Right Trigger (RT / R2):</span>
-            <span style={{ color: '#10b981', fontWeight: 800, float: 'right' }}>Accelerate (Gas)</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Left Trigger (LT / L2):</span>
-            <span style={{ color: '#ef4444', fontWeight: 800, float: 'right' }}>Brake / Reverse</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Left Thumbstick:</span>
-            <span style={{ color: '#06b6d4', fontWeight: 800, float: 'right' }}>Steer Left / Right</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Button A / Cross:</span>
-            <span style={{ color: '#06b6d4', fontWeight: 800, float: 'right' }}>Nitrous Boost (NOS)</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Button X / Square:</span>
-            <span style={{ color: '#f59e0b', fontWeight: 800, float: 'right' }}>Handbrake (E-Brake)</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Button B / Circle:</span>
-            <span style={{ color: '#a855f7', fontWeight: 800, float: 'right' }}>Speedbreaker</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Button Y / Triangle:</span>
-            <span style={{ color: '#fff', fontWeight: 800, float: 'right' }}>Change Camera</span>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#121622', borderRadius: '8px', border: '1px solid #232b3c', fontSize: '13px' }}>
-            <span style={{ color: '#94a3b8' }}>Start / Options:</span>
-            <span style={{ color: '#f59e0b', fontWeight: 800, float: 'right' }}>Pause / Menu (Esc)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Mobile Touch & Gyroscope Controls */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {/* On-Screen Touch Buttons */}
+      {/* 3. Gamepad & Mobile Settings Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+        {/* On-Screen Touch Settings */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #273042', paddingBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Smartphone size={20} color="#f59e0b" />
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: 0 }}>
-                On-Screen Touch Buttons
+                Touch Settings
               </h3>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
@@ -421,7 +570,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
             </div>
 
             {/* Left-Handed Swap Mode */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #232b3c' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
               <div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Left-Handed Mode</div>
                 <div style={{ fontSize: '12px', color: '#64748b' }}>Swap Steering to Right side and Pedals to Left</div>
@@ -435,7 +584,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
             </div>
 
             {/* Haptic Feedback */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #232b3c' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Vibrate size={18} color="#10b981" />
                 <div>
@@ -530,7 +679,7 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
             </div>
 
             {/* Angle & Calibrate */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #232b3c' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#121622', borderRadius: '10px', border: '1px solid #273042' }}>
               <div>
                 <div style={{ fontSize: '12px', color: '#94a3b8' }}>Live Phone Tilt Angle:</div>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: gyroActiveDirection !== 'center' ? '#06b6d4' : '#fff' }}>
@@ -544,104 +693,6 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
               >
                 <RotateCcw size={13} />
                 {calibratedNotice ? 'Calibrated!' : 'Calibrate Zero'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Touch Test Pad */}
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid #273042', paddingBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Sparkles size={18} color="#f59e0b" />
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Live Button Preview & Test Pad
-            </h3>
-          </div>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            Tap or click any button below to test responsiveness & haptic vibration
-          </span>
-        </div>
-
-        <div
-          style={{
-            background: 'linear-gradient(180deg, #0f131a 0%, #07090e 100%)',
-            borderRadius: '16px',
-            border: '1px solid #273042',
-            padding: '24px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-around',
-            alignItems: 'center',
-            gap: '24px',
-          }}
-        >
-          {/* Steering */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Steering</div>
-            <div style={{ display: 'flex', gap: '14px' }}>
-              <button
-                onClick={() => triggerTestPress('LEFT')}
-                className={`nfsmw-touch-pad-btn ${testPressedKey === 'LEFT' ? 'pressed' : ''}`}
-                style={{ width: '64px', height: '64px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <ArrowLeft size={24} color="#f59e0b" />
-                <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700 }}>LEFT</span>
-              </button>
-              <button
-                onClick={() => triggerTestPress('RIGHT')}
-                className={`nfsmw-touch-pad-btn ${testPressedKey === 'RIGHT' ? 'pressed' : ''}`}
-                style={{ width: '64px', height: '64px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <ArrowRight size={24} color="#f59e0b" />
-                <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 700 }}>RIGHT</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Action: NOS & E-Brake */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Pursuit & Boost</div>
-            <div style={{ display: 'flex', gap: '14px' }}>
-              <button
-                onClick={() => triggerTestPress('NOS')}
-                className={`nfsmw-touch-pad-btn nos-btn ${testPressedKey === 'NOS' ? 'pressed' : ''}`}
-                style={{ width: '64px', height: '64px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <Flame size={24} color="#06b6d4" />
-                <span style={{ fontSize: '10px', color: '#67e8f9', fontWeight: 800 }}>NOS</span>
-              </button>
-              <button
-                onClick={() => triggerTestPress('HANDBRAKE')}
-                className={`nfsmw-touch-pad-btn handbrake-btn ${testPressedKey === 'HANDBRAKE' ? 'pressed' : ''}`}
-                style={{ width: '64px', height: '64px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <CircleDot size={22} color="#f59e0b" />
-                <span style={{ fontSize: '9px', color: '#cbd5e1', fontWeight: 800 }}>E-BRAKE</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Drive Pedals */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Drive Pedals</div>
-            <div style={{ display: 'flex', gap: '14px' }}>
-              <button
-                onClick={() => triggerTestPress('BRAKE')}
-                className={`nfsmw-touch-pad-btn brake-pedal-btn ${testPressedKey === 'BRAKE' ? 'pressed' : ''}`}
-                style={{ width: '68px', height: '74px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <ArrowDown size={26} color="#ef4444" />
-                <span style={{ fontSize: '10px', color: '#fca5a5', fontWeight: 800 }}>BRAKE</span>
-              </button>
-              <button
-                onClick={() => triggerTestPress('GAS')}
-                className={`nfsmw-touch-pad-btn gas-pedal-btn ${testPressedKey === 'GAS' ? 'pressed' : ''}`}
-                style={{ width: '68px', height: '82px', transform: `scale(${settings.buttonScale})` }}
-              >
-                <ArrowUp size={28} color="#10b981" />
-                <span style={{ fontSize: '11px', color: '#6ee7b7', fontWeight: 900 }}>GAS</span>
               </button>
             </div>
           </div>

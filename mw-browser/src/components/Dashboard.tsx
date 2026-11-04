@@ -1,5 +1,17 @@
-import React from 'react';
-import { Play, HardDrive, Zap, ShieldCheck, ChevronRight, Users, DownloadCloud, Gamepad2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Play,
+  HardDrive,
+  Zap,
+  ShieldCheck,
+  ChevronRight,
+  Users,
+  DownloadCloud,
+  Gamepad2,
+  Sparkles,
+  Download,
+  CheckCircle2,
+} from 'lucide-react';
 import { GameSettings, StorageStatus } from '../types';
 
 interface DashboardProps {
@@ -27,13 +39,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenStorage,
   webGpuName,
 }) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      (window as any).deferredInstallPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    if ((window as any).deferredInstallPrompt) {
+      setDeferredPrompt((window as any).deferredInstallPrompt);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setPwaInstalled(true);
+        }
+        setDeferredPrompt(null);
+      } catch {}
+    } else {
+      const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      if (isIos) {
+        alert('To add NFS Most Wanted to your Home Screen:\n1. Tap the Share button at the bottom of Safari.\n2. Tap "Add to Home Screen".');
+      } else {
+        alert('To install on Chrome / Edge:\nClick the "Install app" icon at the right of your address bar (or Menu ⋮ -> "Install Need for Speed").');
+      }
+    }
+  };
+
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px' }}>
+    <div className="page-responsive-container">
       {/* Hero Banner - Authentic NFSMW 2005 Industrial Aesthetic */}
       <div
         className="glass-panel"
         style={{
-          padding: '40px 32px',
+          padding: 'clamp(24px, 4vw, 44px) clamp(20px, 3.5vw, 36px)',
           marginBottom: '28px',
           position: 'relative',
           overflow: 'hidden',
@@ -47,45 +95,64 @@ export const Dashboard: React.FC<DashboardProps> = ({
             position: 'absolute',
             top: 0,
             right: '-60px',
-            width: '320px',
+            width: '380px',
             height: '100%',
             background: 'linear-gradient(135deg, transparent 40%, rgba(245, 158, 11, 0.05) 50%, transparent 60%)',
             pointerEvents: 'none',
           }}
         />
 
-        <div style={{ maxWidth: '780px', position: 'relative', zIndex: 10 }}>
-          {/* Badge */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '5px 14px',
-              borderRadius: '20px',
-              background: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
-              marginBottom: '16px',
-            }}
-          >
-            <Zap size={14} color="#f59e0b" />
-            <span
+        <div style={{ maxWidth: '920px', position: 'relative', zIndex: 10 }}>
+          {/* Badge Row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <div
               style={{
-                fontSize: '12px',
-                fontWeight: 800,
-                color: '#f59e0b',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '5px 14px',
+                borderRadius: '20px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
               }}
             >
-              WebGPU • 120 Hz Simulation • 1-Click In-Browser Mods
-            </span>
+              <Zap size={14} color="#f59e0b" />
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  color: '#f59e0b',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                WebGPU • 120 Hz Simulation • Real OPFS Mod Engine
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: '20px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#10b981',
+              }}
+            >
+              <ShieldCheck size={14} />
+              <span>Offline Ready</span>
+            </div>
           </div>
 
           {/* Title */}
           <h1
             style={{
-              fontSize: 'clamp(32px, 5vw, 44px)',
+              fontSize: 'clamp(32px, 5vw, 48px)',
               fontWeight: 900,
               lineHeight: 1.1,
               marginBottom: '14px',
@@ -96,18 +163,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
           </h1>
 
-          <p style={{ color: '#94a3b8', fontSize: '15.5px', marginBottom: '28px', lineHeight: 1.6 }}>
+          <p style={{ color: '#94a3b8', fontSize: 'clamp(14px, 1.8vw, 16px)', marginBottom: '28px', lineHeight: 1.6 }}>
             Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers ({webGpuName || 'WebGPU'} • {settings.resolution.toUpperCase()} 120 Hz).
-            Install famous community mods (Xbox 360 Shaders, ThirteenAG Widescreen, 4K HUD, Skyline R34) with 1 click right in your browser.
+            Community mods write directly to browser OPFS <code style={{ color: '#f59e0b', background: '#181e2b', padding: '2px 6px', borderRadius: '4px' }}>/opfs/nfsmw/game/</code> with seamless background asset downloading to prevent in-race lag.
           </p>
 
-          {/* Big Action Buttons */}
+          {/* Action Buttons Row */}
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => onStartGame(false)}
               className="btn btn-primary"
               style={{
-                padding: '14px 32px',
+                padding: '14px 34px',
                 fontSize: '15px',
                 fontWeight: 900,
                 letterSpacing: '0.06em',
@@ -136,6 +203,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
 
             <button
+              onClick={handleInstallApp}
+              className="btn btn-secondary"
+              style={{
+                padding: '14px 20px',
+                fontSize: '14px',
+                fontWeight: 700,
+                borderColor: '#06b6d4',
+                color: '#06b6d4',
+                background: 'rgba(6, 182, 212, 0.1)',
+              }}
+              title="Adds app icon to your phone home screen or desktop app launcher"
+            >
+              {pwaInstalled ? <CheckCircle2 size={17} color="#10b981" /> : <Download size={17} color="#06b6d4" />}
+              {pwaInstalled ? 'Installed to Home Screen' : '📲 Add Home Screen Shortcut'}
+            </button>
+
+            <button
               onClick={onOpenMods}
               className="btn btn-secondary"
               style={{
@@ -149,33 +233,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Sparkles size={17} color="#f59e0b" />
               Mods Workshop ({activeModsCount} Active)
             </button>
-
-            <button
-              onClick={onOpenMultiplayer}
-              className="btn btn-secondary"
-              style={{
-                padding: '14px 20px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderColor: '#06b6d4',
-                color: '#06b6d4',
-              }}
-            >
-              <Users size={17} color="#06b6d4" />
-              Multiplayer Rooms
-            </button>
           </div>
         </div>
       </div>
 
-      {/* 4 Essential Quick Cards */}
+      {/* 4 Essential Quick Cards (Responsive Fluid Grid) */}
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '32px',
-        }}
+        className="responsive-grid-2"
+        style={{ marginBottom: '32px' }}
       >
         {/* Card 1: 1-Click Mod Workshop */}
         <div
@@ -200,21 +265,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              1-Click Mod Store
+              Real OPFS Mod Engine
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              Install ThirteenAG Widescreen, Xbox 360 Shaders, 4K HUD, Skyline R34, and Extra Options with 1 tap.
+              Install ThirteenAG Widescreen, Xbox 360 Visuals, 4K Redux, and Extra Options with real file override and automatic restore.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Installed Mods:</span>
-                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{activeModsCount} Mods Layered</span>
+                <span style={{ color: '#f59e0b', fontWeight: 700 }}>{activeModsCount} Real Mods Layered</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b' }}>Custom Mods:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>Drag & Drop .mwmod</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Native ZIP / .mwmod Unpacker</span>
               </div>
             </div>
           </div>
@@ -225,7 +290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Card 2: PC Keybindings & Gamepad */}
+        {/* Card 2: PC Keybindings & Touch Customizer */}
         <div
           className="glass-panel"
           style={{
@@ -247,27 +312,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              Keybindings & Gamepads
+              Keybindings, Gamepads & Touch Placement
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              Rebind PC keys, connect Xbox / PlayStation controllers, or use mobile touch pedals & tilt steering.
+              Rebind PC keys, connect gamepads, or customize the exact placement and offsets of pedals & steering on touch screens.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>PC Keyboard:</span>
-                <span style={{ color: '#06b6d4', fontWeight: 700 }}>Custom Rebinding Active</span>
+                <span style={{ color: '#64748b' }}>Custom Placement:</span>
+                <span style={{ color: '#06b6d4', fontWeight: 700 }}>Interactive Drag & Offsets</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Gamepad Support:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>RT / LT & Analogue</span>
+                <span style={{ color: '#64748b' }}>Motion Steering:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Gyroscope Tilt Sensors</span>
               </div>
             </div>
           </div>
 
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px', color: '#06b6d4', fontSize: '13px', fontWeight: 700 }}>
-            <span>Configure Controls</span>
+            <span>Configure Controls & Placement</span>
             <ChevronRight size={15} />
           </div>
         </div>
@@ -298,7 +363,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              Host or join multiplayer rooms with 6-character room codes. Synchronized telemetry & real-time radio taunts.
+              Host or join multiplayer rooms with 6-character room codes. Synchronized telemetry, police pursuits & radio taunts.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
@@ -335,29 +400,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                OFFLINE CACHE
+                LOCAL OPFS STORAGE
               </span>
               <HardDrive size={18} color="#10b981" />
             </div>
 
             <div style={{ fontSize: '19px', fontWeight: 800, color: '#fff', marginBottom: '6px' }}>
-              Zero-Lag OPFS Cache
+              Zero-Lag Asset Cache
             </div>
 
             <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '16px' }}>
-              Pre-download maps to eliminate in-race stuttering on slow internet, or select your local game folder.
+              Pre-downloads maps in the background to eliminate in-race stuttering, or sync from your local retail folder.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px', borderTop: '1px solid #232b3c', paddingTop: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Asset Cache:</span>
+                <span style={{ color: '#64748b' }}>Storage Path:</span>
+                <span style={{ color: '#06b6d4', fontWeight: 700 }}>/opfs/nfsmw/game/</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Executable:</span>
                 <span style={{ color: storage.hasSpeedExe ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
-                  {storage.hasSpeedExe ? 'Speed.exe Ready' : 'Download on Launch'}
+                  {storage.hasSpeedExe ? 'speed.exe Ready' : 'Download on Launch'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>Offline Ready:</span>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>OPFS Persistent</span>
+                <span style={{ color: '#64748b' }}>Offline Persistence:</span>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>Browser OPFS Active</span>
               </div>
             </div>
           </div>
@@ -388,7 +457,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <ShieldCheck size={22} color="#10b981" />
           <div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
-              100% Free to Host on Vercel & GitHub Pages ($0 Cost)
+              100% Free Hosting on Vercel & GitHub Pages ($0 Cost)
             </div>
             <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
               Host the web app on Vercel/GitHub Pages and stream 1.4 GB game assets for free using Cloudflare R2 (0 egress fees).
