@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div>
           <div className="brand-title">
             NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
-            <span className="brand-tag">2005 REBORN</span>
+            <span className="brand-tag">2005</span>
           </div>
           <div className="brand-subtitle">
             <span className="status-dot"></span>

@@ -172,7 +172,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 letterSpacing: '-0.02em',
               }}
             >
-              NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
+              NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>{' '}
+              <span style={{ color: '#94a3b8', fontSize: 'clamp(22px, 3.2vw, 34px)', fontWeight: 800 }}>2005</span>
             </h1>
 
             <p style={{ color: '#94a3b8', fontSize: 'clamp(14px, 1.8vw, 16px)', marginBottom: '28px', lineHeight: 1.6 }}>
