@@ -141,12 +141,18 @@ export const App: React.FC = () => {
     return unsub;
   }, []);
 
-  const handleToggleGame = (offlinePreload?: boolean) => {
+  const handleToggleGame = async (offlinePreload?: boolean) => {
     if (isRunning) {
       runtime.stopSession();
     } else {
       if (typeof offlinePreload === 'boolean') {
         setSettings((prev) => ({ ...prev, offlinePreload }));
+      }
+      try {
+        // Auto-merge all enabled mods into OPFS before starting game session
+        await modManager.autoMergeEnabledModsToOPFS();
+      } catch (err) {
+        console.warn('[OPFS Mod Engine] Auto-merge on launch warning:', err);
       }
       runtime.startSession();
     }
@@ -168,6 +174,16 @@ export const App: React.FC = () => {
       setMods(modManager.getMods());
     } catch (err: any) {
       console.error('[ModManager] Error installing mod archive:', err);
+      throw err;
+    }
+  };
+
+  const handleInstallFolder = async (files: { path: string; file: File }[], folderName: string) => {
+    try {
+      await modManager.installFromFolder(files, folderName);
+      setMods(modManager.getMods());
+    } catch (err: any) {
+      console.error('[ModManager] Error installing mod folder:', err);
       throw err;
     }
   };
@@ -323,6 +339,7 @@ export const App: React.FC = () => {
             onToggleMod={handleToggleMod}
             onUpdatePriority={handleUpdateModPriority}
             onInstallMod={handleInstallMod}
+            onInstallFolder={handleInstallFolder}
             onEnableAllRecommended={handleEnableAllRecommended}
             onResetDefaults={handleResetModDefaults}
             onRemoveMod={handleRemoveMod}

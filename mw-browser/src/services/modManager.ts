@@ -12,6 +12,10 @@ import {
   writeGameFile,
   backupGameFile,
   restoreGameFile,
+  isRealGameAsset,
+  writeModCacheFile,
+  getModCacheFile,
+  listModCacheFiles,
 } from './opfsModStorage';
 
 const STORAGE_KEY = 'nfsmw_real_mods';
@@ -21,38 +25,54 @@ const MOD_FILES_PREFIX = 'nfsmw_mod_files_';
 
 export const VERIFIED_REAL_MODS: ModItem[] = [
   {
+    id: 'retouch-graphics-rg-v9-1',
+    name: 'Retouch Graphics (RG v9.1) Remaster',
+    version: '9.1.0',
+    author: 'Elay / Aksine',
+    description: 'Complete next-generation graphics remaster: custom compiled DirectX shaders (IDI_CAR, IDI_FILTER, IDI_WORLD, IDI_VISUALTREATMENT), ShaderLoader, bloom increaser, motion blur, and cinematic lighting.',
+    type: 'graphics',
+    category: 'graphics',
+    enabled: true,
+    priority: 98,
+    assetsCount: 36,
+    downloadUrl: '/mods/retouch-graphics-rg-v9-1-9.1.0.mwmod',
+    fileSize: 2065000,
+    isInstalled: true,
+    verified: true,
+    targetPaths: [
+      'IDI_CAR_FX',
+      'IDI_FILTER_FX',
+      'IDI_VISUALTREATMENT_FX',
+      'IDI_WORLD_FX',
+      'GLOBAL/GLOBALA.BUN',
+      'scripts/XNFS-ShaderLoader-MW.asi',
+      'scripts/NFSMWGraphics.asi',
+      'scripts/BloomResIncreaser.asi',
+      'scripts/NextGenGraphics.MostWanted.asi',
+      'scripts/RGv9.1 visual settings.nfsms',
+    ],
+  },
+  {
     id: 'thirteenag-widescreen-fov',
-    name: 'ThirteenAG Widescreen Fix & FOV Correction',
+    name: 'ThirteenAG Widescreen Fix & HD Reflections',
     version: '1.0.0',
-    author: 'ThirteenAG / Recomp Team',
-    description: 'Dynamic 16:9 / 21:9 Hor+ scaling, FOV correction, unstretched speedometer dial geometry, and fixed 120 Hz simulation.',
+    author: 'ThirteenAG / Aero_',
+    description: 'Dynamic 16:9 / 21:9 Hor+ scaling, FOV correction, unstretched speedometer dial geometry, HD real-time reflections, and fixed 120 Hz simulation.',
     type: 'hud_ui',
     category: 'hud_ui',
     enabled: true,
     priority: 100,
-    assetsCount: 1,
+    assetsCount: 4,
     downloadUrl: '/mods/thirteenag-widescreen-fov-1.0.0.mwmod',
-    fileSize: 664,
+    fileSize: 330600,
     isInstalled: true,
     verified: true,
-    targetPaths: ['scripts/NFSMW.WidescreenFix.ini'],
-  },
-  {
-    id: 'xbox360-visuals-xenon',
-    name: 'Xbox 360 Visuals & Xenon Lighting Overhaul',
-    version: '2.4.0',
-    author: 'Aksine / NFSMods',
-    description: 'Restores authentic Xbox 360 golden-hour bloom shader, asphalt specular sheen, rain droplets on camera, and depth of field.',
-    type: 'graphics',
-    category: 'graphics',
-    enabled: true,
-    priority: 95,
-    assetsCount: 1,
-    downloadUrl: '/mods/xbox360-visuals-xenon-2.4.0.mwmod',
-    fileSize: 689,
-    isInstalled: true,
-    verified: true,
-    targetPaths: ['scripts/Xbox360Visuals.ini'],
+    targetPaths: [
+      'scripts/NFSMostWanted.WidescreenFix.asi',
+      'scripts/NFSMostWanted.WidescreenFix.ini',
+      'scripts/NFSMWHDReflections.asi',
+      'scripts/NFSMWHDReflections.ini',
+    ],
   },
   {
     id: 'ba508c-nofilter',
@@ -62,12 +82,12 @@ export const VERIFIED_REAL_MODS: ModItem[] = [
     description: 'Eliminates harsh yellow/orange tint and restores natural atmospheric lighting, vivid sky contrasts, and sharp shadows.',
     type: 'graphics',
     category: 'graphics',
-    enabled: true,
+    enabled: false,
     priority: 92,
     assetsCount: 2,
     downloadUrl: '/mods/ba508c-nofilter-1.2.0.mwmod',
     fileSize: 1815,
-    isInstalled: true,
+    isInstalled: false,
     verified: true,
     targetPaths: ['scripts/NFSMostWanted.NoFilter.ini', 'scripts/SkyAndLightingChange.nfsms'],
   },
@@ -208,98 +228,34 @@ export const VERIFIED_REAL_MODS: ModItem[] = [
     targetPaths: ['GLOBAL/gameplay.bin', 'GLOBAL/FE_ATTRIB.bin'],
   },
   {
-    id: 'extra-options-exopts',
-    name: 'NFSMW Extra Options (ExOpts) Unlimiter',
-    version: '2.0.1',
-    author: 'nlgzrgn / MW ExOpts Team',
-    description: 'Unlocks hidden challenge series cars in dealer, debug free-cam, custom traffic density, and pursuit Heat levels 1-10.',
-    type: 'scripts',
-    category: 'scripts',
-    enabled: false,
-    priority: 72,
-    assetsCount: 1,
-    downloadUrl: '/mods/extra-options-exopts-2.0.1.mwmod',
-    fileSize: 691,
-    isInstalled: false,
-    verified: true,
-    targetPaths: ['scripts/NFSMWExtraOptions.ini'],
-  },
-  {
-    id: 'bc98db-unlimiter',
-    name: 'NFSMW Unlimiter v4 Engine Extender',
-    version: '4.0.1',
-    author: 'nlgzrgn',
-    description: 'Eliminates hardcoded car limits, enables unlimited addon vehicles, customizable rim sizes, and multi-tier vinyls.',
-    type: 'scripts',
-    category: 'scripts',
+    id: 'nfs-mw-ea-hd-logo',
+    name: 'EA HD 1080p Startup Logo & Intro Movie',
+    version: '1.0.0',
+    author: 'EA Sound & Video Port',
+    description: 'High-definition 1080p 60fps intro cinematics and crystal clear EA logo startup movie sequence.',
+    type: 'audio_cutscenes',
+    category: 'audio_cutscenes',
     enabled: false,
     priority: 70,
-    assetsCount: 1,
-    downloadUrl: '/mods/bc98db-unlimiter-4.0.1.mwmod',
-    fileSize: 636,
+    assetsCount: 3,
+    downloadUrl: '/mods/nfs-mw-ea-hd-logo-1.0.0.mwmod',
+    fileSize: 124200000,
     isInstalled: false,
     verified: true,
-    targetPaths: ['scripts/NFSMWUnlimiter.ini'],
-  },
-  {
-    id: 'xbox360-hd-cutscenes',
-    name: 'Xbox 360 60 FPS Full HD Cutscenes Remaster',
-    version: '1.1.0',
-    author: 'Aksine / Xbox 360 Port Team',
-    description: 'Restores 1080p 60 FPS cinematic FMVs with enhanced 5.1 multichannel audio for Razor, Mia, Cross, and prologue cutscenes.',
-    type: 'audio_cutscenes',
-    category: 'audio_cutscenes',
-    enabled: false,
-    priority: 68,
-    assetsCount: 1,
-    downloadUrl: '/mods/xbox360-hd-cutscenes-1.1.0.mwmod',
-    fileSize: 655,
-    isInstalled: false,
-    verified: true,
-    targetPaths: ['scripts/CutscenesHD.ini'],
-  },
-  {
-    id: 'lossless-ea-trax-soundtrack',
-    name: 'Lossless 48 kHz EA Trax Soundtrack & Pursuit Score',
-    version: '2.0.0',
-    author: 'EA Sound Team / NFSMW Audiophiles',
-    description: 'High-bitrate 48 kHz lossless EA Trax soundtrack (The Prodigy, Celldweller, Disturbed, Avenged Sevenfold) and dynamic cop pursuit stems.',
-    type: 'audio_cutscenes',
-    category: 'audio_cutscenes',
-    enabled: false,
-    priority: 66,
-    assetsCount: 1,
-    downloadUrl: '/mods/lossless-ea-trax-soundtrack-2.0.0.mwmod',
-    fileSize: 701,
-    isInstalled: false,
-    verified: true,
-    targetPaths: ['scripts/EATraxLossless.ini'],
-  },
-  {
-    id: 'recompiled-vinyls-1024x',
-    name: 'HD Recompiled Vinyls Pack (1024x)',
-    version: '1.0.0',
-    author: 'EllisWorkshop / NFSMods',
-    description: 'Ultra-crisp 1024x vector vinyls, body paint decals, racing stripes, and custom sponsors in lossless fidelity.',
-    type: 'graphics',
-    category: 'graphics',
-    enabled: false,
-    priority: 64,
-    assetsCount: 1,
-    downloadUrl: '/mods/recompiled-vinyls-1024x-1.0.0.mwmod',
-    fileSize: 621,
-    isInstalled: false,
-    verified: true,
-    targetPaths: ['scripts/HDVinyls.ini'],
+    targetPaths: [
+      'MOVIES/attract_movie_english_ntsc.vp6',
+      'MOVIES/psa_english_ntsc.vp6',
+      'MOVIES/ealogo_english_ntsc.vp6',
+    ],
   },
 ];
 
 export const PRESET_PROFILES: ModProfile[] = [
   {
-    id: 'preset-4k-visuals',
-    name: '4K Visuals & Xenon Lighting',
-    description: 'Maximum visual fidelity: ThirteenAG FOV, Xbox 360 Xenon lighting, NoFilter clarity, and HD vinyls.',
-    enabledModIds: ['thirteenag-widescreen-fov', 'xbox360-visuals-xenon', 'ba508c-nofilter', 'recompiled-vinyls-1024x'],
+    id: 'preset-rg-v9-1',
+    name: 'Retouch Graphics (RG v9.1) Remaster',
+    description: 'Full next-gen visual suite: Retouch Graphics shaders, ThirteenAG FOV, and EA HD 1080p intro movies.',
+    enabledModIds: ['retouch-graphics-rg-v9-1', 'thirteenag-widescreen-fov', 'nfs-mw-ea-hd-logo'],
     createdAt: 1730000000000,
     isPreset: true,
     icon: '✨',
@@ -323,19 +279,10 @@ export const PRESET_PROFILES: ModProfile[] = [
     icon: '🏁',
   },
   {
-    id: 'preset-cinematic-ea-trax',
-    name: 'Cinematic HD & Lossless Soundtrack',
-    description: 'Xbox 360 60 FPS FMVs and 48 kHz Lossless EA Trax soundtrack with dynamic pursuit stems.',
-    enabledModIds: ['xbox360-hd-cutscenes', 'lossless-ea-trax-soundtrack', 'ba508c-nofilter', 'thirteenag-widescreen-fov'],
-    createdAt: 1730000000000,
-    isPreset: true,
-    icon: '🎬',
-  },
-  {
     id: 'preset-pursuit-unlimiter',
-    name: 'Pursuit Overhaul & Unlimiter',
-    description: 'Rockport aggressive Rhino pursuit AI, Extra Options ExOpts, and NFSMW Unlimiter v4.',
-    enabledModIds: ['rockport-enhancement-mod', 'extra-options-exopts', 'bc98db-unlimiter', 'nfsmw-free-unlock-all'],
+    name: 'Rockport Police & Pursuit Overhaul',
+    description: 'Rockport aggressive Rhino pursuit AI, Free Unlock All, and Retouch Graphics v9.1.',
+    enabledModIds: ['rockport-enhancement-mod', 'nfsmw-free-unlock-all', 'retouch-graphics-rg-v9-1'],
     createdAt: 1730000000000,
     isPreset: true,
     icon: '🛡️',
@@ -369,6 +316,17 @@ export class ModManagerService {
   }
 
   private loadFromStorage(): void {
+    const OLD_DUMMY_IDS = new Set([
+      'xbox360-visuals-xenon',
+      'extra-options-exopts',
+      'bc98db-unlimiter',
+      'xbox360-hd-cutscenes',
+      'lossless-ea-trax-soundtrack',
+      'recompiled-vinyls-1024x',
+      'hd-modern-visuals',
+      'pro-drift-handling',
+    ]);
+
     // 1. Load mods
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -385,7 +343,10 @@ export class ModManagerService {
           }
         }
         for (const customMod of map.values()) {
-          list.push(customMod);
+          // Strictly reject old placeholder dummy mods
+          if (!OLD_DUMMY_IDS.has(customMod.id)) {
+            list.push(customMod);
+          }
         }
         this.mods = list.sort((a, b) => b.priority - a.priority);
       } else {
@@ -407,7 +368,7 @@ export class ModManagerService {
 
     // 3. Load active profile id
     try {
-      this.activeProfileId = localStorage.getItem(ACTIVE_PROFILE_KEY) || 'preset-4k-visuals';
+      this.activeProfileId = localStorage.getItem(ACTIVE_PROFILE_KEY) || 'preset-rg-v9-1';
     } catch {}
   }
 
@@ -564,7 +525,15 @@ export class ModManagerService {
   ): Promise<{ mod: ModItem; appliedPaths: string[] }> {
     const entries = await extractZipEntries(blob);
     if (entries.length === 0) {
-      throw new Error('Archive contains no valid files');
+      throw new Error('No implementable mod files found in archive (archive is empty or unreadable). Nothing to implement on game.');
+    }
+
+    // Filter out link-only, text-only, or useless files
+    const realEntries = entries.filter((e) => isRealGameAsset(e.path));
+    if (realEntries.length === 0) {
+      throw new Error(
+        'No implementable mod files found in archive (contains only readme or download links). Nothing to implement on game.'
+      );
     }
 
     let manifest: any = null;
@@ -585,13 +554,23 @@ export class ModManagerService {
     const author = manifest?.author || 'Community Author';
     const version = manifest?.version || '1.0.0';
     const description = manifest?.description || 'Custom mod package applied to browser virtual file system.';
-    const type = manifest?.category || manifest?.type || (name.toLowerCase().includes('car') ? 'vehicles' : 'graphics');
-    const category = manifest?.category || type;
+    
+    // Auto-detect category
+    let detectedCategory = manifest?.category || manifest?.type;
+    if (!detectedCategory) {
+      const pathsLower = realEntries.map((e) => e.path.toLowerCase());
+      if (pathsLower.some((p) => p.includes('cars/'))) detectedCategory = 'vehicles';
+      else if (pathsLower.some((p) => p.includes('idi_') || p.includes('.fx') || p.includes('nextgen') || p.includes('.dds') || p.includes('.tpf'))) detectedCategory = 'graphics';
+      else if (pathsLower.some((p) => p.includes('movies/') || p.includes('.vp6') || p.includes('.mus'))) detectedCategory = 'audio_cutscenes';
+      else if (pathsLower.some((p) => p.includes('hud') || p.includes('resizer') || p.includes('adapter'))) detectedCategory = 'hud_ui';
+      else if (pathsLower.some((p) => p.includes('attributes.bin') || p.includes('gameplay.bin'))) detectedCategory = 'gameplay';
+      else detectedCategory = 'scripts';
+    }
 
     const appliedPaths: string[] = [];
 
-    for (const entry of entries) {
-      if (entry.path.toLowerCase() === 'manifest.json') continue;
+    for (const entry of realEntries) {
+      await writeModCacheFile(modId, entry.path, entry.data);
       await backupGameFile(modId, entry.path);
       const ok = await writeGameFile(entry.path, entry.data);
       if (ok) {
@@ -609,18 +588,167 @@ export class ModManagerService {
       version,
       author,
       description,
-      type,
-      category,
+      type: detectedCategory,
+      category: detectedCategory,
       enabled: true,
-      priority: manifest?.priority || 80,
+      priority: manifest?.priority || 85,
       assetsCount: appliedPaths.length,
       isInstalled: true,
       verified: !!manifest,
       targetPaths: appliedPaths,
+      fileSize: blob.size,
     };
 
     this.registerMod(newMod);
     return { mod: newMod, appliedPaths };
+  }
+
+  /**
+   * Install a mod from multi-file folder selection (e.g. webkitdirectory or folder drop)
+   */
+  public async installFromFolder(
+    files: { path: string; file: File }[],
+    folderName: string
+  ): Promise<{ mod: ModItem; appliedPaths: string[] }> {
+    if (!files || files.length === 0) {
+      throw new Error('No files provided in selected folder.');
+    }
+
+    // Check for real game assets
+    const realFiles = files.filter((f) => isRealGameAsset(f.path));
+    if (realFiles.length === 0) {
+      throw new Error(
+        'No implementable mod files found in folder (contains only readme or download links). Nothing to implement on game.'
+      );
+    }
+
+    const modId = folderName.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase() || `mod-folder-${Date.now()}`;
+    const name = folderName;
+    const author = 'Local Folder Import';
+    const version = '1.0.0';
+
+    // Auto-detect category
+    const pathsLower = realFiles.map((f) => f.path.toLowerCase());
+    let detectedCategory = 'scripts';
+    if (pathsLower.some((p) => p.includes('cars/'))) detectedCategory = 'vehicles';
+    else if (pathsLower.some((p) => p.includes('idi_') || p.includes('.fx') || p.includes('nextgen') || p.includes('.dds') || p.includes('.tpf'))) detectedCategory = 'graphics';
+    else if (pathsLower.some((p) => p.includes('movies/') || p.includes('.vp6') || p.includes('.mus'))) detectedCategory = 'audio_cutscenes';
+    else if (pathsLower.some((p) => p.includes('hud') || p.includes('resizer') || p.includes('adapter'))) detectedCategory = 'hud_ui';
+    else if (pathsLower.some((p) => p.includes('attributes.bin') || p.includes('gameplay.bin'))) detectedCategory = 'gameplay';
+
+    const appliedPaths: string[] = [];
+    let totalSize = 0;
+
+    for (const item of realFiles) {
+      // Clean path: strip the root folder name prefix if present
+      let relPath = item.path.replace(/^\/+/, '');
+      const parts = relPath.split('/');
+      if (parts.length > 1 && parts[0].toLowerCase() === folderName.toLowerCase()) {
+        relPath = parts.slice(1).join('/');
+      }
+
+      const buf = await item.file.arrayBuffer();
+      const data = new Uint8Array(buf);
+      totalSize += data.length;
+
+      await writeModCacheFile(modId, relPath, data);
+      await backupGameFile(modId, relPath);
+      const ok = await writeGameFile(relPath, data);
+      if (ok) {
+        appliedPaths.push(relPath);
+      }
+    }
+
+    try {
+      localStorage.setItem(MOD_FILES_PREFIX + modId, JSON.stringify(appliedPaths));
+    } catch {}
+
+    const newMod: ModItem = {
+      id: modId,
+      name,
+      version,
+      author,
+      description: `Folder mod imported with ${appliedPaths.length} game files.`,
+      type: detectedCategory,
+      category: detectedCategory,
+      enabled: true,
+      priority: 85,
+      assetsCount: appliedPaths.length,
+      isInstalled: true,
+      verified: false,
+      targetPaths: appliedPaths,
+      fileSize: totalSize,
+    };
+
+    this.registerMod(newMod);
+    return { mod: newMod, appliedPaths };
+  }
+
+  /**
+   * Auto-merges all currently enabled mods into the game filesystem /opfs/nfsmw/game/
+   * in strict priority order (lower priority first, highest priority last so top mods win).
+   * Automatically invoked before game launch.
+   */
+  public async autoMergeEnabledModsToOPFS(
+    onProgress?: (message: string, current: number, total: number) => void
+  ): Promise<{ mergedMods: number; mergedFiles: number }> {
+    const enabledMods = this.mods.filter((m) => m.enabled);
+    if (enabledMods.length === 0) {
+      console.log('[OPFS Mod Engine] No mods enabled; stock game files intact.');
+      return { mergedMods: 0, mergedFiles: 0 };
+    }
+
+    // Sort ascending by priority so higher priority mods write last and override earlier ones
+    const sorted = [...enabledMods].sort((a, b) => a.priority - b.priority);
+    let totalFiles = 0;
+    let mergedModsCount = 0;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const mod = sorted[i];
+      if (onProgress) {
+        onProgress(`Merging mod "${mod.name}" (${i + 1}/${sorted.length})…`, i + 1, sorted.length);
+      }
+
+      // 1. Check if cached in OPFS mods_cache
+      const cachedPaths = await listModCacheFiles(mod.id);
+      if (cachedPaths.length > 0) {
+        for (const p of cachedPaths) {
+          const data = await getModCacheFile(mod.id, p);
+          if (data) {
+            await writeGameFile(p, data);
+            totalFiles++;
+          }
+        }
+        mergedModsCount++;
+        continue;
+      }
+
+      // 2. If not in OPFS cache and has downloadUrl, download and apply
+      if (mod.downloadUrl) {
+        try {
+          const res = await fetch(mod.downloadUrl);
+          if (res.ok) {
+            const blob = await res.blob();
+            const entries = await extractZipEntries(blob);
+            for (const entry of entries) {
+              if (isRealGameAsset(entry.path)) {
+                await writeModCacheFile(mod.id, entry.path, entry.data);
+                await writeGameFile(entry.path, entry.data);
+                totalFiles++;
+              }
+            }
+            mergedModsCount++;
+          }
+        } catch (err) {
+          console.warn(`[OPFS Mod Engine] Failed to fetch and merge ${mod.name}:`, err);
+        }
+      }
+    }
+
+    console.log(
+      `[OPFS Mod Engine] Auto-merged ${mergedModsCount} active mods (${totalFiles} files) into /opfs/nfsmw/game/`
+    );
+    return { mergedMods: mergedModsCount, mergedFiles: totalFiles };
   }
 
   /**
@@ -639,6 +767,11 @@ export class ModManagerService {
   }): Promise<ModItem> {
     const modId = `custom-${options.name.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase()}-${Date.now()}`;
     const targetPath = options.targetPath.replace(/^\/+/, '');
+
+    // Validate single file targetPath
+    if (!isRealGameAsset(targetPath) && !(options.file instanceof File && /\.(zip|mwmod|tar|gz)$/i.test(options.file.name))) {
+      throw new Error('No implementable mod files found (contains only readme or download links). Nothing to implement on game.');
+    }
 
     // Read bytes
     const arrayBuffer = await options.file.arrayBuffer();
@@ -662,6 +795,7 @@ export class ModManagerService {
     }
 
     // Direct single file installation to targetPath
+    await writeModCacheFile(modId, targetPath, data);
     await backupGameFile(modId, targetPath);
     await writeGameFile(targetPath, data);
 

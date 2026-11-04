@@ -1,40 +1,51 @@
 [
   {
+    "id": "retouch-graphics-rg-v9-1",
+    "name": "Retouch Graphics (RG v9.1) Remaster",
+    "version": "9.1.0",
+    "author": "Elay / Aksine",
+    "description": "Complete next-generation graphics remaster: custom compiled DirectX shaders (IDI_CAR, IDI_FILTER, IDI_WORLD, IDI_VISUALTREATMENT), ShaderLoader, bloom increaser, motion blur, and cinematic lighting.",
+    "type": "graphics",
+    "category": "graphics",
+    "enabled": true,
+    "priority": 98,
+    "assetsCount": 36,
+    "downloadUrl": "/mods/retouch-graphics-rg-v9-1-9.1.0.mwmod",
+    "fileSize": 2063195,
+    "isInstalled": true,
+    "verified": true,
+    "targetPaths": [
+      "IDI_CAR_FX",
+      "IDI_FILTER_FX",
+      "IDI_VISUALTREATMENT_FX",
+      "IDI_WORLD_FX",
+      "GLOBAL/GLOBALA.BUN",
+      "scripts/XNFS-ShaderLoader-MW.asi",
+      "scripts/NFSMWGraphics.asi",
+      "scripts/BloomResIncreaser.asi",
+      "scripts/NextGenGraphics.MostWanted.asi"
+    ]
+  },
+  {
     "id": "thirteenag-widescreen-fov",
-    "name": "ThirteenAG Widescreen Fix & FOV Correction",
+    "name": "ThirteenAG Widescreen Fix & HD Reflections",
     "version": "1.0.0",
-    "author": "ThirteenAG / Recomp Team",
-    "description": "Dynamic 16:9 / 21:9 Hor+ scaling, FOV correction, unstretched speedometer dial geometry, and fixed 120 Hz simulation.",
+    "author": "ThirteenAG / Aero_",
+    "description": "Dynamic 16:9 / 21:9 Hor+ scaling, unstretched speedometer dial geometry, HD real-time reflections, and fixed 120 Hz simulation.",
     "type": "hud_ui",
     "category": "hud_ui",
     "enabled": true,
     "priority": 100,
-    "assetsCount": 1,
+    "assetsCount": 4,
     "downloadUrl": "/mods/thirteenag-widescreen-fov-1.0.0.mwmod",
-    "fileSize": 664,
+    "fileSize": 330638,
     "isInstalled": true,
     "verified": true,
     "targetPaths": [
-      "scripts/NFSMW.WidescreenFix.ini"
-    ]
-  },
-  {
-    "id": "xbox360-visuals-xenon",
-    "name": "Xbox 360 Visuals & Xenon Lighting Overhaul",
-    "version": "2.4.0",
-    "author": "Aksine / NFSMods",
-    "description": "Restores authentic Xbox 360 golden-hour bloom shader, asphalt specular sheen, rain droplets on camera, and depth of field.",
-    "type": "graphics",
-    "category": "graphics",
-    "enabled": true,
-    "priority": 95,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/xbox360-visuals-xenon-2.4.0.mwmod",
-    "fileSize": 689,
-    "isInstalled": true,
-    "verified": true,
-    "targetPaths": [
-      "scripts/Xbox360Visuals.ini"
+      "scripts/NFSMostWanted.WidescreenFix.asi",
+      "scripts/NFSMostWanted.WidescreenFix.ini",
+      "scripts/NFSMWHDReflections.asi",
+      "scripts/NFSMWHDReflections.ini"
     ]
   },
   {
@@ -45,12 +56,12 @@
     "description": "Eliminates harsh yellow/orange tint and restores natural atmospheric lighting, vivid sky contrasts, and sharp shadows.",
     "type": "graphics",
     "category": "graphics",
-    "enabled": true,
+    "enabled": false,
     "priority": 92,
     "assetsCount": 2,
     "downloadUrl": "/mods/ba508c-nofilter-1.2.0.mwmod",
     "fileSize": 1815,
-    "isInstalled": true,
+    "isInstalled": false,
     "verified": true,
     "targetPaths": [
       "scripts/NFSMostWanted.NoFilter.ini",
@@ -220,98 +231,23 @@
     ]
   },
   {
-    "id": "extra-options-exopts",
-    "name": "NFSMW Extra Options (ExOpts) Unlimiter",
-    "version": "2.0.1",
-    "author": "nlgzrgn / MW ExOpts Team",
-    "description": "Unlocks hidden challenge series cars in dealer, debug free-cam, custom traffic density, and pursuit Heat levels 1-10.",
-    "type": "scripts",
-    "category": "scripts",
-    "enabled": false,
-    "priority": 72,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/extra-options-exopts-2.0.1.mwmod",
-    "fileSize": 691,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/NFSMWExtraOptions.ini"
-    ]
-  },
-  {
-    "id": "bc98db-unlimiter",
-    "name": "NFSMW Unlimiter v4 Engine Extender",
-    "version": "4.0.1",
-    "author": "nlgzrgn",
-    "description": "Eliminates hardcoded car limits, enables unlimited addon vehicles, customizable rim sizes, and multi-tier vinyls.",
-    "type": "scripts",
-    "category": "scripts",
+    "id": "nfs-mw-ea-hd-logo",
+    "name": "EA HD 1080p Startup Logo & Intro Movie",
+    "version": "1.0.0",
+    "author": "EA Sound & Video Port",
+    "description": "High-definition 1080p 60fps intro cinematics and crystal clear EA logo startup movie sequence.",
+    "type": "audio_cutscenes",
+    "category": "audio_cutscenes",
     "enabled": false,
     "priority": 70,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/bc98db-unlimiter-4.0.1.mwmod",
-    "fileSize": 636,
+    "assetsCount": 3,
+    "downloadUrl": "/mods/nfs-mw-ea-hd-logo-1.0.0.mwmod",
+    "fileSize": 22571356,
     "isInstalled": false,
     "verified": true,
     "targetPaths": [
-      "scripts/NFSMWUnlimiter.ini"
-    ]
-  },
-  {
-    "id": "xbox360-hd-cutscenes",
-    "name": "Xbox 360 60 FPS Full HD Cutscenes Remaster",
-    "version": "1.1.0",
-    "author": "Aksine / Xbox 360 Port Team",
-    "description": "Restores 1080p 60 FPS cinematic FMVs with enhanced 5.1 multichannel audio for Razor, Mia, Cross, and prologue cutscenes.",
-    "type": "audio_cutscenes",
-    "category": "audio_cutscenes",
-    "enabled": false,
-    "priority": 68,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/xbox360-hd-cutscenes-1.1.0.mwmod",
-    "fileSize": 655,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/CutscenesHD.ini"
-    ]
-  },
-  {
-    "id": "lossless-ea-trax-soundtrack",
-    "name": "Lossless 48 kHz EA Trax Soundtrack & Pursuit Score",
-    "version": "2.0.0",
-    "author": "EA Sound Team / NFSMW Audiophiles",
-    "description": "High-bitrate 48 kHz lossless EA Trax soundtrack (The Prodigy, Celldweller, Disturbed, Avenged Sevenfold) and dynamic cop pursuit stems.",
-    "type": "audio_cutscenes",
-    "category": "audio_cutscenes",
-    "enabled": false,
-    "priority": 66,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/lossless-ea-trax-soundtrack-2.0.0.mwmod",
-    "fileSize": 701,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/EATraxLossless.ini"
-    ]
-  },
-  {
-    "id": "recompiled-vinyls-1024x",
-    "name": "HD Recompiled Vinyls Pack (1024x)",
-    "version": "1.0.0",
-    "author": "EllisWorkshop / NFSMods",
-    "description": "Ultra-crisp 1024x vector vinyls, body paint decals, racing stripes, and custom sponsors in lossless fidelity.",
-    "type": "graphics",
-    "category": "graphics",
-    "enabled": false,
-    "priority": 64,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/recompiled-vinyls-1024x-1.0.0.mwmod",
-    "fileSize": 621,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/HDVinyls.ini"
+      "MOVIES/ealogo_english_ntsc.vp6",
+      "MOVIES/psa_english_ntsc.vp6"
     ]
   }
 ]

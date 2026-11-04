@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Volume2,
   Layers,
+  FolderUp,
 } from 'lucide-react';
 
 interface ModManagerViewProps {
@@ -29,6 +30,7 @@ interface ModManagerViewProps {
   onToggleMod: (id: string) => Promise<void> | void;
   onUpdatePriority: (id: string, newPriority: number) => void;
   onInstallMod: (file: File) => Promise<void> | void;
+  onInstallFolder?: (files: { path: string; file: File }[], folderName: string) => Promise<void> | void;
   onEnableAllRecommended?: () => Promise<void> | void;
   onResetDefaults?: () => void;
   onRemoveMod?: (id: string) => Promise<void> | void;
@@ -49,6 +51,7 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
   onToggleMod,
   onUpdatePriority,
   onInstallMod,
+  onInstallFolder,
   onEnableAllRecommended,
   onResetDefaults,
   onRemoveMod,
@@ -166,22 +169,71 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
     }
   };
 
+  // Helper to read directory entries recursively on drag-drop
+  const readEntryRecursively = async (entry: any, basePath = ''): Promise<{ path: string; file: File }[]> => {
+    if (entry.isFile) {
+      return new Promise((resolve) => {
+        entry.file(
+          (file: File) => resolve([{ path: `${basePath}${file.name}`, file }]),
+          () => resolve([])
+        );
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      const readEntriesPromise = (): Promise<any[]> =>
+        new Promise((resolve) => {
+          dirReader.readEntries((results: any[]) => resolve(results || []), () => resolve([]));
+        });
+      let entries: any[] = [];
+      let batch: any[] = await readEntriesPromise();
+      while (batch.length > 0) {
+        entries = entries.concat(batch);
+        batch = await readEntriesPromise();
+      }
+      const subFiles: { path: string; file: File }[] = [];
+      for (const sub of entries) {
+        const res = await readEntryRecursively(sub, `${basePath}${entry.name}/`);
+        subFiles.push(...res);
+      }
+      return subFiles;
+    }
+    return [];
+  };
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      try {
+
+    try {
+      const items = e.dataTransfer.items;
+      if (items && items.length > 0) {
+        const entry = (items[0] as any).webkitGetAsEntry ? (items[0] as any).webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) {
+          setIsProcessing(`Scanning folder "${entry.name}"…`);
+          const allFiles = await readEntryRecursively(entry);
+          if (onInstallFolder) {
+            await onInstallFolder(allFiles, entry.name);
+          } else {
+            await modService.installFromFolder(allFiles, entry.name);
+          }
+          setInstallSuccess(`Successfully unpacked & applied folder "${entry.name}" to OPFS!`);
+          setTimeout(() => setInstallSuccess(null), 4000);
+          return;
+        }
+      }
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
         setIsProcessing(file.name);
         await onInstallMod(file);
         setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
         setTimeout(() => setInstallSuccess(null), 4000);
-      } catch (err: any) {
-        setErrorMessage(`Failed to install archive: ${err.message}`);
-        setTimeout(() => setErrorMessage(null), 5000);
-      } finally {
-        setIsProcessing(null);
       }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to install mod archive or folder');
+      setTimeout(() => setErrorMessage(null), 7000);
+    } finally {
+      setIsProcessing(null);
     }
   };
 
@@ -361,11 +413,55 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
                     setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
                     setTimeout(() => setInstallSuccess(null), 4000);
                   } catch (err: any) {
-                    setErrorMessage(`Failed to install archive: ${err.message}`);
-                    setTimeout(() => setErrorMessage(null), 5000);
+                    setErrorMessage(err.message || 'Failed to install archive');
+                    setTimeout(() => setErrorMessage(null), 7000);
                   } finally {
                     setIsProcessing(null);
+                    e.target.value = '';
                   }
+                }
+              }}
+            />
+          </label>
+
+          <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: '12.5px', padding: '9px 14px', borderColor: '#f59e0b', color: '#f59e0b' }} title="Upload an entire unpacked mod folder (like RG v9.1 or car packs)">
+            <FolderUp size={14} />
+            Import Mod Folder
+            <input
+              type="file"
+              // @ts-ignore
+              webkitdirectory=""
+              directory=""
+              multiple
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+                try {
+                  setIsProcessing('Processing mod folder…');
+                  const fileList: { path: string; file: File }[] = [];
+                  let rootFolderName = 'CustomFolderMod';
+                  for (let i = 0; i < files.length; i++) {
+                    const f = files[i];
+                    const rel = f.webkitRelativePath || f.name;
+                    if (i === 0 && rel.includes('/')) {
+                      rootFolderName = rel.split('/')[0];
+                    }
+                    fileList.push({ path: rel, file: f });
+                  }
+                  if (onInstallFolder) {
+                    await onInstallFolder(fileList, rootFolderName);
+                  } else {
+                    await modService.installFromFolder(fileList, rootFolderName);
+                  }
+                  setInstallSuccess(`Successfully unpacked & applied folder "${rootFolderName}" to OPFS!`);
+                  setTimeout(() => setInstallSuccess(null), 4000);
+                } catch (err: any) {
+                  setErrorMessage(err.message || 'Failed to install mod folder');
+                  setTimeout(() => setErrorMessage(null), 7000);
+                } finally {
+                  setIsProcessing(null);
+                  e.target.value = '';
                 }
               }}
             />

@@ -10,6 +10,31 @@ export interface ExtractedZipEntry {
 }
 
 /**
+ * Validates whether a file is a genuine implementable game asset.
+ * Rejects link-only files (.url, .txt, .md, .html, .lnk) and non-game files.
+ */
+export function isRealGameAsset(filePath: string): boolean {
+  const norm = filePath.replace(/\\/g, '/');
+  const baseName = norm.split('/').pop() || '';
+  if (!baseName || baseName.startsWith('.') || baseName === 'manifest.json') return false;
+
+  // Compiled DirectX shader bytecode files (e.g. IDI_CAR_FX, IDI_FILTER_FX, IDI_WORLD_FX)
+  if (baseName.startsWith('IDI_')) return true;
+
+  const dotIdx = baseName.lastIndexOf('.');
+  if (dotIdx === -1) return false;
+  const ext = baseName.slice(dotIdx).toLowerCase();
+
+  const REAL_EXTENSIONS = new Set([
+    '.bin', '.ini', '.asi', '.dll', '.fx', '.bun', '.nfsms',
+    '.end', '.lzc', '.tpf', '.vp6', '.dds', '.cfg', '.exe',
+    '.tpk', '.raw', '.fe', '.mad', '.fed', '.mus'
+  ]);
+
+  return REAL_EXTENSIONS.has(ext);
+}
+
+/**
  * Pure TypeScript ZIP extractor using Web Streams DecompressionStream.
  * Unpacks any standard ZIP / .mwmod file in the browser without 3rd-party dependencies.
  */
@@ -221,4 +246,86 @@ export async function restoreGameFile(modId: string, path: string): Promise<bool
     await removeGameFile(path);
     return false;
   }
+}
+
+/**
+ * Access OPFS /nfsmw/mods_cache/<modId>/ directory.
+ */
+export async function getModCacheDirectory(modId: string): Promise<FileSystemDirectoryHandle | null> {
+  if (typeof navigator === 'undefined' || !navigator.storage?.getDirectory) return null;
+  try {
+    const root = await navigator.storage.getDirectory();
+    const nfsmw = await root.getDirectoryHandle('nfsmw', { create: true });
+    const modsCache = await nfsmw.getDirectoryHandle('mods_cache', { create: true });
+    return await modsCache.getDirectoryHandle(modId, { create: true });
+  } catch (e) {
+    console.warn('[ModStorage] OPFS mods_cache directory unavailable:', e);
+    return null;
+  }
+}
+
+/**
+ * Write bytes to mod cache in OPFS.
+ */
+export async function writeModCacheFile(modId: string, path: string, data: Uint8Array): Promise<boolean> {
+  const cacheDir = await getModCacheDirectory(modId);
+  if (!cacheDir) return false;
+  try {
+    const handle = await getFileHandleForPath(cacheDir, path, true);
+    if ((handle as any).createSyncAccessHandle) {
+      const access = await (handle as any).createSyncAccessHandle();
+      access.truncate(0);
+      access.write(data, { at: 0 });
+      access.flush();
+      access.close();
+    } else {
+      const writable = await (handle as any).createWritable();
+      await writable.write(data);
+      await writable.close();
+    }
+    return true;
+  } catch (err) {
+    console.error(`[ModStorage] Failed writing cache ${modId}/${path}:`, err);
+    return false;
+  }
+}
+
+/**
+ * Read bytes from mod cache in OPFS.
+ */
+export async function getModCacheFile(modId: string, path: string): Promise<Uint8Array | null> {
+  const cacheDir = await getModCacheDirectory(modId);
+  if (!cacheDir) return null;
+  try {
+    const handle = await getFileHandleForPath(cacheDir, path, false);
+    const file = await handle.getFile();
+    return new Uint8Array(await file.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * List all relative file paths cached for a mod in OPFS.
+ */
+export async function listModCacheFiles(modId: string): Promise<string[]> {
+  const cacheDir = await getModCacheDirectory(modId);
+  if (!cacheDir) return [];
+  const results: string[] = [];
+
+  async function walk(dir: FileSystemDirectoryHandle, prefix: string) {
+    for await (const [name, handle] of (dir as any).entries()) {
+      const rel = prefix ? `${prefix}/${name}` : name;
+      if (handle.kind === 'directory') {
+        await walk(handle as FileSystemDirectoryHandle, rel);
+      } else {
+        results.push(rel);
+      }
+    }
+  }
+
+  try {
+    await walk(cacheDir, '');
+  } catch {}
+  return results;
 }

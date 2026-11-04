@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameSettings, ModItem, MobileControlSettings } from '../types';
 import { Square, Eye, Maximize2, Minimize2, ExternalLink, Smartphone, Gamepad2, Pause, DownloadCloud, CheckCircle2 } from 'lucide-react';
 import { TouchControls } from './TouchControls';
+import { ModManagerService } from '../services/modManager';
 
 interface GameCanvasProps {
   settings: GameSettings;
@@ -96,6 +97,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
+  }, []);
+
+  // Auto-merge active OPFS mods into /opfs/nfsmw/game/ before execution
+  useEffect(() => {
+    ModManagerService.getInstance()
+      .autoMergeEnabledModsToOPFS()
+      .catch((err) => {
+        console.warn('[GameCanvas] Mod auto-merge warning:', err);
+      });
   }, []);
 
   // Track Fullscreen state and manage Keyboard Lock
