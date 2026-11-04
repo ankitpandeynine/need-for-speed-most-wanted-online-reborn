@@ -35,7 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenMods,
   onOpenControls,
   onOpenMultiplayer,
-  onOpenSettings,
+  onOpenSettings: _onOpenSettings,
   onOpenStorage,
   webGpuName,
 }) => {
@@ -541,42 +541,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <ChevronRight size={15} />
           </div>
         </div>
-      </div>
-
-      {/* Free Hosting & Open Source Notice */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '20px 24px',
-          background: 'rgba(15, 20, 28, 0.7)',
-          border: '1px solid #232b3c',
-          borderRadius: '12px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <ShieldCheck size={22} color="#10b981" />
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
-              100% Free Hosting on Vercel & GitHub Pages ($0 Cost)
-            </div>
-            <div style={{ fontSize: '12.5px', color: '#94a3b8' }}>
-              Host the web app on Vercel/GitHub Pages and stream 1.4 GB game assets for free using Cloudflare R2 (0 egress fees).
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={onOpenSettings}
-          className="btn btn-secondary"
-          style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 700, borderColor: '#f59e0b', color: '#f59e0b' }}
-        >
-          Graphics & Audio
-        </button>
       </div>
     </div>
   );
