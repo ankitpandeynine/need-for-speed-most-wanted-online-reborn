@@ -168,9 +168,9 @@ export const App: React.FC = () => {
     setMods(modManager.getMods());
   };
 
-  const handleInstallMod = async (file: File) => {
+  const handleInstallMod = async (file: File, forceMerge: boolean = false) => {
     try {
-      await modManager.installAndApplyFromBlob(file, undefined, file.name.replace(/\.(mwmod|zip|bin)$/i, ''));
+      await modManager.installAndApplyFromBlob(file, undefined, file.name.replace(/\.(mwmod|zip|bin)$/i, ''), forceMerge);
       setMods(modManager.getMods());
     } catch (err: any) {
       console.error('[ModManager] Error installing mod archive:', err);
@@ -178,9 +178,9 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleInstallFolder = async (files: { path: string; file: File }[], folderName: string) => {
+  const handleInstallFolder = async (files: { path: string; file: File }[], folderName: string, forceMerge: boolean = false) => {
     try {
-      await modManager.installFromFolder(files, folderName);
+      await modManager.installFromFolder(files, folderName, forceMerge);
       setMods(modManager.getMods());
     } catch (err: any) {
       console.error('[ModManager] Error installing mod folder:', err);

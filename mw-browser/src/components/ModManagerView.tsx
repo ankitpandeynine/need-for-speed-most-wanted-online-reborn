@@ -24,13 +24,14 @@ import {
   Layers,
   FolderUp,
 } from 'lucide-react';
+import { ModCompatibilityReport } from '../types';
 
 interface ModManagerViewProps {
   mods: ModItem[];
   onToggleMod: (id: string) => Promise<void> | void;
   onUpdatePriority: (id: string, newPriority: number) => void;
-  onInstallMod: (file: File) => Promise<void> | void;
-  onInstallFolder?: (files: { path: string; file: File }[], folderName: string) => Promise<void> | void;
+  onInstallMod: (file: File, forceMerge?: boolean) => Promise<void> | void;
+  onInstallFolder?: (files: { path: string; file: File }[], folderName: string, forceMerge?: boolean) => Promise<void> | void;
   onEnableAllRecommended?: () => Promise<void> | void;
   onResetDefaults?: () => void;
   onRemoveMod?: (id: string) => Promise<void> | void;
@@ -68,6 +69,14 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'conflicts'>('all');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
+  // Force Merge & Compatibility Warning Modal
+  const [pendingForceMerge, setPendingForceMerge] = useState<{
+    file?: File;
+    folderFiles?: { path: string; file: File }[];
+    folderName?: string;
+    report: ModCompatibilityReport;
+  } | null>(null);
 
   // Modals
   const [showUrlModal, setShowUrlModal] = useState(false);
@@ -211,13 +220,25 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
         if (entry && entry.isDirectory) {
           setIsProcessing(`Scanning folder "${entry.name}"…`);
           const allFiles = await readEntryRecursively(entry);
-          if (onInstallFolder) {
-            await onInstallFolder(allFiles, entry.name);
-          } else {
-            await modService.installFromFolder(allFiles, entry.name);
+          try {
+            if (onInstallFolder) {
+              await onInstallFolder(allFiles, entry.name, false);
+            } else {
+              await modService.installFromFolder(allFiles, entry.name, false);
+            }
+            setInstallSuccess(`Successfully unpacked & applied folder "${entry.name}" to OPFS!`);
+            setTimeout(() => setInstallSuccess(null), 4000);
+          } catch (folderErr: any) {
+            if (folderErr.compatibilityReport) {
+              setPendingForceMerge({
+                folderFiles: allFiles,
+                folderName: entry.name,
+                report: folderErr.compatibilityReport,
+              });
+            } else {
+              throw folderErr;
+            }
           }
-          setInstallSuccess(`Successfully unpacked & applied folder "${entry.name}" to OPFS!`);
-          setTimeout(() => setInstallSuccess(null), 4000);
           return;
         }
       }
@@ -225,9 +246,20 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
         setIsProcessing(file.name);
-        await onInstallMod(file);
-        setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
-        setTimeout(() => setInstallSuccess(null), 4000);
+        try {
+          await onInstallMod(file, false);
+          setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
+          setTimeout(() => setInstallSuccess(null), 4000);
+        } catch (fileErr: any) {
+          if (fileErr.compatibilityReport) {
+            setPendingForceMerge({
+              file,
+              report: fileErr.compatibilityReport,
+            });
+          } else {
+            throw fileErr;
+          }
+        }
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to install mod archive or folder');
@@ -409,12 +441,19 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
                   const file = e.target.files[0];
                   try {
                     setIsProcessing(file.name);
-                    await onInstallMod(file);
+                    await onInstallMod(file, false);
                     setInstallSuccess(`Successfully unpacked & applied "${file.name}" to OPFS!`);
                     setTimeout(() => setInstallSuccess(null), 4000);
                   } catch (err: any) {
-                    setErrorMessage(err.message || 'Failed to install archive');
-                    setTimeout(() => setErrorMessage(null), 7000);
+                    if (err.compatibilityReport) {
+                      setPendingForceMerge({
+                        file,
+                        report: err.compatibilityReport,
+                      });
+                    } else {
+                      setErrorMessage(err.message || 'Failed to install archive');
+                      setTimeout(() => setErrorMessage(null), 7000);
+                    }
                   } finally {
                     setIsProcessing(null);
                     e.target.value = '';
@@ -424,7 +463,7 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
             />
           </label>
 
-          <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: '12.5px', padding: '9px 14px', borderColor: '#f59e0b', color: '#f59e0b' }} title="Upload an entire unpacked mod folder (like RG v9.1 or car packs)">
+          <label className="btn btn-secondary" style={{ cursor: 'pointer', fontSize: '12.5px', padding: '9px 14px', borderColor: '#f59e0b', color: '#f59e0b' }} title="Upload an entire unpacked mod folder (like RG v9.1, MW Eternal, or car packs)">
             <FolderUp size={14} />
             Import Mod Folder
             <input
@@ -450,15 +489,33 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
                     fileList.push({ path: rel, file: f });
                   }
                   if (onInstallFolder) {
-                    await onInstallFolder(fileList, rootFolderName);
+                    await onInstallFolder(fileList, rootFolderName, false);
                   } else {
-                    await modService.installFromFolder(fileList, rootFolderName);
+                    await modService.installFromFolder(fileList, rootFolderName, false);
                   }
                   setInstallSuccess(`Successfully unpacked & applied folder "${rootFolderName}" to OPFS!`);
                   setTimeout(() => setInstallSuccess(null), 4000);
                 } catch (err: any) {
-                  setErrorMessage(err.message || 'Failed to install mod folder');
-                  setTimeout(() => setErrorMessage(null), 7000);
+                  if (err.compatibilityReport) {
+                    const fileList: { path: string; file: File }[] = [];
+                    let rootFolderName = 'CustomFolderMod';
+                    for (let i = 0; i < files.length; i++) {
+                      const f = files[i];
+                      const rel = f.webkitRelativePath || f.name;
+                      if (i === 0 && rel.includes('/')) {
+                        rootFolderName = rel.split('/')[0];
+                      }
+                      fileList.push({ path: rel, file: f });
+                    }
+                    setPendingForceMerge({
+                      folderFiles: fileList,
+                      folderName: rootFolderName,
+                      report: err.compatibilityReport,
+                    });
+                  } else {
+                    setErrorMessage(err.message || 'Failed to install mod folder');
+                    setTimeout(() => setErrorMessage(null), 7000);
+                  }
                 } finally {
                   setIsProcessing(null);
                   e.target.value = '';
@@ -835,6 +892,63 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
                       <span>{mod.enabled ? 'ACTIVE' : 'OFF'}</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Compatibility & Runnability Status */}
+                <div style={{ marginBottom: '10px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {mod.isForceMerged ? (
+                    <span
+                      style={{
+                        fontSize: '10.5px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        color: '#f59e0b',
+                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      ⚡ Force Merged & Active
+                    </span>
+                  ) : mod.compatibility?.status === 'partial' ? (
+                    <span
+                      style={{
+                        fontSize: '10.5px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        background: 'rgba(234, 179, 8, 0.15)',
+                        color: '#eab308',
+                        border: '1px solid rgba(234, 179, 8, 0.4)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title={mod.compatibility.reason}
+                    >
+                      ⚠️ WebGPU Direct (Desktop DLL Bypassed)
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: '10.5px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        color: '#10b981',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      ✓ 100% WebGPU Compatible
+                    </span>
+                  )}
                 </div>
 
                 {/* Conflict Warnings on Card */}
@@ -1286,6 +1400,165 @@ export const ModManagerView: React.FC<ModManagerViewProps> = ({
                 Download & Install
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Compatibility Assessment & Force Merge */}
+      {pendingForceMerge && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+          }}
+          onClick={() => setPendingForceMerge(null)}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              maxWidth: '560px',
+              width: '100%',
+              padding: '28px',
+              borderRadius: '14px',
+              border: `1px solid ${pendingForceMerge.report.status === 'incompatible' ? '#ef4444' : '#f59e0b'}`,
+              boxShadow: `0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px ${pendingForceMerge.report.status === 'incompatible' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '12px',
+                  background: pendingForceMerge.report.status === 'incompatible' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: pendingForceMerge.report.status === 'incompatible' ? '#ef4444' : '#f59e0b',
+                }}
+              >
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#fff' }}>
+                  {pendingForceMerge.report.status === 'incompatible' ? 'Mod Incompatibility Detected' : 'Compatibility Notice'}
+                </h3>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    background: pendingForceMerge.report.status === 'incompatible' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    color: pendingForceMerge.report.status === 'incompatible' ? '#ef4444' : '#f59e0b',
+                    border: `1px solid ${pendingForceMerge.report.status === 'incompatible' ? '#ef4444' : '#f59e0b'}`,
+                    marginTop: '4px',
+                    display: 'inline-block',
+                  }}
+                >
+                  {pendingForceMerge.report.status === 'incompatible' ? 'Incompatible Mod Structure' : 'Desktop Hooks Detected'}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13.5px', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '14px' }}>
+              {pendingForceMerge.report.reason}
+            </p>
+
+            {pendingForceMerge.report.issues.length > 0 && (
+              <div
+                style={{
+                  background: 'rgba(15, 23, 42, 0.7)',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  marginBottom: '20px',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Compatibility Diagnostics:
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#e2e8f0', lineHeight: 1.6 }}>
+                  {pendingForceMerge.report.issues.map((iss, i) => (
+                    <li key={i}>{iss}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {pendingForceMerge.report.canForceMerge ? (
+              <div>
+                <div style={{ fontSize: '12.5px', color: '#94a3b8', marginBottom: '16px', lineHeight: 1.4 }}>
+                  💡 <strong>Force Merge Option:</strong> If you know this mod works, you can bypass validation and force merge its files into the game filesystem (<code style={{ color: '#06b6d4' }}>/opfs/nfsmw/game/</code>).
+                </div>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setPendingForceMerge(null)}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '13px', padding: '10px 18px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const target = pendingForceMerge;
+                      setPendingForceMerge(null);
+                      try {
+                        setIsProcessing('Force merging mod…');
+                        if (target.folderFiles && target.folderName) {
+                          if (onInstallFolder) {
+                            await onInstallFolder(target.folderFiles, target.folderName, true);
+                          } else {
+                            await modService.installFromFolder(target.folderFiles, target.folderName, true);
+                          }
+                          setInstallSuccess(`✓ Force merged folder mod "${target.folderName}" into game filesystem!`);
+                        } else if (target.file) {
+                          await onInstallMod(target.file, true);
+                          setInstallSuccess(`✓ Force merged "${target.file.name}" into game filesystem!`);
+                        }
+                        setTimeout(() => setInstallSuccess(null), 4000);
+                      } catch (forceErr: any) {
+                        setErrorMessage(`Force merge failed: ${forceErr.message}`);
+                        setTimeout(() => setErrorMessage(null), 6000);
+                      } finally {
+                        setIsProcessing(null);
+                      }
+                    }}
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: '13px',
+                      padding: '10px 20px',
+                      fontWeight: 900,
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      borderColor: '#f59e0b',
+                      boxShadow: '0 0 20px rgba(245, 158, 11, 0.4)',
+                    }}
+                  >
+                    ⚡ FORCE MERGE & RUN ANYWAY
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setPendingForceMerge(null)}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '13px', padding: '10px 20px' }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

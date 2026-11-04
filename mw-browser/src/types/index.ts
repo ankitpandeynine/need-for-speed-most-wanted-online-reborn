@@ -120,6 +120,19 @@ export type ModCategory =
   | 'hud_ui'
   | 'scripts';
 
+export type ModCompatibilityStatus = 'compatible' | 'partial' | 'incompatible';
+
+export interface ModCompatibilityReport {
+  status: ModCompatibilityStatus;
+  isRunnable: boolean;
+  score: number; // 0 to 100
+  reason: string;
+  issues: string[];
+  supportedAssetsCount: number;
+  unsupportedFiles: string[];
+  canForceMerge: boolean;
+}
+
 export interface ModItem {
   id: string;
   name: string;
@@ -138,6 +151,8 @@ export interface ModItem {
   previewUrl?: string;
   sourceFile?: string;
   targetPaths?: string[];
+  compatibility?: ModCompatibilityReport;
+  isForceMerged?: boolean;
 }
 
 export interface ModConflict {

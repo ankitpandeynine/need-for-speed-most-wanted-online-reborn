@@ -27,6 +27,35 @@
     ]
   },
   {
+    "id": "mw-eternal-overhaul",
+    "name": "MW Eternal Next-Gen UI, Gameplay & Lighting Overhaul",
+    "version": "1.0.0",
+    "author": "MW Eternal Team",
+    "description": "Comprehensive overhaul: Xbox 360 & PlayStation controller icons (.tpk), remastered HUD textures (HUDS_Custom), InGame & Global bundles, attributes.bin physics, and EternalLighting scripts.",
+    "type": "gameplay",
+    "category": "gameplay",
+    "enabled": true,
+    "priority": 94,
+    "assetsCount": 43,
+    "downloadUrl": "/mods/mw-eternal-overhaul-1.0.0.mwmod",
+    "fileSize": 8889164,
+    "isInstalled": true,
+    "verified": true,
+    "targetPaths": [
+      "scripts/MW360Tweaks.asi",
+      "scripts/buttons-playstation.tpk",
+      "scripts/buttons-xbox.tpk",
+      "scripts/EternalLighting.nfsms",
+      "GLOBAL/attributes.bin",
+      "GLOBAL/FE_ATTRIB.bin",
+      "GLOBAL/gameplay.bin",
+      "GLOBAL/GLOBALA.BUN",
+      "GLOBAL/GLOBALB.BUN",
+      "GLOBAL/InGameA.bun",
+      "GLOBAL/InGameB.bun"
+    ]
+  },
+  {
     "id": "thirteenag-widescreen-fov",
     "name": "ThirteenAG Widescreen Fix & HD Reflections",
     "version": "1.0.0",
