@@ -102,137 +102,241 @@ export const Dashboard: React.FC<DashboardProps> = ({
           }}
         />
 
-        <div style={{ maxWidth: '920px', position: 'relative', zIndex: 10 }}>
-          {/* Badge Row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '5px 14px',
-                borderRadius: '20px',
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
-              }}
-            >
-              <Zap size={14} color="#f59e0b" />
-              <span
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'clamp(24px, 3.5vw, 48px)',
+            position: 'relative',
+            zIndex: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          {/* Left Column: Title, Badges, Details, Action Buttons */}
+          <div style={{ flex: '1 1 540px', maxWidth: '780px' }}>
+            {/* Badge Row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <div
                 style={{
-                  fontSize: '12px',
-                  fontWeight: 800,
-                  color: '#f59e0b',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 14px',
+                  borderRadius: '20px',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
                 }}
               >
-                WebGPU • 120 Hz Simulation • Real OPFS Mod Engine
-              </span>
+                <Zap size={14} color="#f59e0b" />
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    color: '#f59e0b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  WebGPU • 120 Hz Simulation • Real OPFS Mod Engine
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#10b981',
+                }}
+              >
+                <ShieldCheck size={14} />
+                <span>Offline Ready</span>
+              </div>
             </div>
 
-            <div
+            {/* Title */}
+            <h1
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '5px 12px',
-                borderRadius: '20px',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#10b981',
+                fontSize: 'clamp(32px, 5vw, 48px)',
+                fontWeight: 900,
+                lineHeight: 1.1,
+                marginBottom: '14px',
+                color: '#ffffff',
+                letterSpacing: '-0.02em',
               }}
             >
-              <ShieldCheck size={14} />
-              <span>Offline Ready</span>
+              NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
+            </h1>
+
+            <p style={{ color: '#94a3b8', fontSize: 'clamp(14px, 1.8vw, 16px)', marginBottom: '28px', lineHeight: 1.6 }}>
+              Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers ({webGpuName || 'WebGPU'} • {settings.resolution.toUpperCase()} 120 Hz).
+              Community mods write directly to browser OPFS <code style={{ color: '#f59e0b', background: '#181e2b', padding: '2px 6px', borderRadius: '4px' }}>/opfs/nfsmw/game/</code> with seamless background asset downloading to prevent in-race lag.
+            </p>
+
+            {/* Action Buttons Row */}
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => onStartGame(false)}
+                className="btn btn-primary"
+                style={{
+                  padding: '14px 34px',
+                  fontSize: '15px',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  boxShadow: '0 0 24px rgba(245, 158, 11, 0.45)',
+                }}
+              >
+                <Play size={18} fill="#000" />
+                START ENGINE / PLAY NOW
+              </button>
+
+              <button
+                onClick={() => onStartGame(true)}
+                className="btn btn-secondary"
+                style={{
+                  padding: '14px 22px',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  borderColor: '#10b981',
+                  color: '#10b981',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                }}
+                title="Pre-downloads all maps into local OPFS cache for 0 network lag"
+              >
+                <DownloadCloud size={17} color="#10b981" />
+                0-Lag Offline Launch
+              </button>
+
+              <button
+                onClick={handleInstallApp}
+                className="btn btn-secondary"
+                style={{
+                  padding: '14px 20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderColor: '#06b6d4',
+                  color: '#06b6d4',
+                  background: 'rgba(6, 182, 212, 0.1)',
+                }}
+                title="Adds app icon to your phone home screen or desktop app launcher"
+              >
+                {pwaInstalled ? <CheckCircle2 size={17} color="#10b981" /> : <Download size={17} color="#06b6d4" />}
+                {pwaInstalled ? 'Installed to Home Screen' : '📲 Add Home Screen Shortcut'}
+              </button>
+
+              <button
+                onClick={onOpenMods}
+                className="btn btn-secondary"
+                style={{
+                  padding: '14px 20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderColor: '#f59e0b',
+                  color: '#f59e0b',
+                }}
+              >
+                <Sparkles size={17} color="#f59e0b" />
+                Mods Workshop ({activeModsCount} Active)
+              </button>
             </div>
           </div>
 
-          {/* Title */}
-          <h1
+          {/* Right Column: Authentic NFSMW BMW M3 GTR Cover Car Artwork Showcase */}
+          <div
+            className="hero-car-showcase"
             style={{
-              fontSize: 'clamp(32px, 5vw, 48px)',
-              fontWeight: 900,
-              lineHeight: 1.1,
-              marginBottom: '14px',
-              color: '#ffffff',
-              letterSpacing: '-0.02em',
+              flex: '0 0 auto',
+              width: 'clamp(260px, 25vw, 340px)',
+              margin: '0 auto',
+              position: 'relative',
             }}
           >
-            NEED FOR SPEED <span style={{ color: '#f59e0b' }}>MOST WANTED</span>
-          </h1>
-
-          <p style={{ color: '#94a3b8', fontSize: 'clamp(14px, 1.8vw, 16px)', marginBottom: '28px', lineHeight: 1.6 }}>
-            Run the authentic 2005 Black Edition directly in modern desktop and mobile browsers ({webGpuName || 'WebGPU'} • {settings.resolution.toUpperCase()} 120 Hz).
-            Community mods write directly to browser OPFS <code style={{ color: '#f59e0b', background: '#181e2b', padding: '2px 6px', borderRadius: '4px' }}>/opfs/nfsmw/game/</code> with seamless background asset downloading to prevent in-race lag.
-          </p>
-
-          {/* Action Buttons Row */}
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
+            <div
+              style={{
+                position: 'relative',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '2px solid rgba(245, 158, 11, 0.55)',
+                boxShadow:
+                  '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.3), 0 0 20px rgba(14, 165, 233, 0.25)',
+                background: 'linear-gradient(135deg, #141b29 0%, #0c1018 100%)',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              }}
               onClick={() => onStartGame(false)}
-              className="btn btn-primary"
-              style={{
-                padding: '14px 34px',
-                fontSize: '15px',
-                fontWeight: 900,
-                letterSpacing: '0.06em',
-                boxShadow: '0 0 24px rgba(245, 158, 11, 0.45)',
-              }}
+              title="Click to Launch Game with the legendary BMW M3 GTR"
             >
-              <Play size={18} fill="#000" />
-              START ENGINE / PLAY NOW
-            </button>
+              {/* Top Banner Tag */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '10px',
+                  zIndex: 2,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(9, 12, 18, 0.88)',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '20px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: 900,
+                  color: '#f59e0b',
+                  letterSpacing: '0.05em',
+                  backdropFilter: 'blur(8px)',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.7)',
+                }}
+              >
+                ★ BLACKLIST #1 TARGET
+              </div>
 
-            <button
-              onClick={() => onStartGame(true)}
-              className="btn btn-secondary"
-              style={{
-                padding: '14px 22px',
-                fontSize: '14px',
-                fontWeight: 800,
-                borderColor: '#10b981',
-                color: '#10b981',
-                background: 'rgba(16, 185, 129, 0.1)',
-              }}
-              title="Pre-downloads all maps into local OPFS cache for 0 network lag"
-            >
-              <DownloadCloud size={17} color="#10b981" />
-              0-Lag Offline Launch
-            </button>
+              {/* The Car Cover Image */}
+              <img
+                src="/images/nfsmw-cover.png"
+                alt="Need for Speed: Most Wanted (2005) - BMW M3 GTR"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                  filter: 'contrast(1.06) saturate(1.05)',
+                  transform: 'scale(1.01)',
+                  transition: 'transform 0.35s ease',
+                }}
+              />
 
-            <button
-              onClick={handleInstallApp}
-              className="btn btn-secondary"
-              style={{
-                padding: '14px 20px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderColor: '#06b6d4',
-                color: '#06b6d4',
-                background: 'rgba(6, 182, 212, 0.1)',
-              }}
-              title="Adds app icon to your phone home screen or desktop app launcher"
-            >
-              {pwaInstalled ? <CheckCircle2 size={17} color="#10b981" /> : <Download size={17} color="#06b6d4" />}
-              {pwaInstalled ? 'Installed to Home Screen' : '📲 Add Home Screen Shortcut'}
-            </button>
-
-            <button
-              onClick={onOpenMods}
-              className="btn btn-secondary"
-              style={{
-                padding: '14px 20px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderColor: '#f59e0b',
-                color: '#f59e0b',
-              }}
-            >
-              <Sparkles size={17} color="#f59e0b" />
-              Mods Workshop ({activeModsCount} Active)
-            </button>
+              {/* Bottom Specs Overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(0deg, rgba(8, 11, 16, 0.98) 0%, rgba(8, 11, 16, 0.82) 70%, transparent 100%)',
+                  padding: '22px 14px 12px 14px',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#fff', letterSpacing: '0.04em' }}>
+                  BMW M3 GTR (E46)
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
+                  <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 700 }}>
+                    4.0L P60B40 V8 • 500 HP
+                  </span>
+                  <span style={{ fontSize: '10.5px', color: '#f59e0b', fontWeight: 900 }}>
+                    PLAY NOW ▶
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

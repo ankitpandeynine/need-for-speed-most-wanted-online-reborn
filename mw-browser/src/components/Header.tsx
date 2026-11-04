@@ -21,10 +21,33 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="header-container">
-      {/* Brand & Title - NFSMW 2005 Inspired */}
+      {/* Brand & Title - NFSMW 2005 Authentic Cover Logo */}
       <div className="header-brand" onClick={() => onSelectTab('dashboard')}>
-        <div className="brand-badge">
-          <span style={{ fontWeight: 900, fontSize: '15px', color: '#000', letterSpacing: '-0.05em' }}>MW</span>
+        <div
+          className="brand-logo-wrapper"
+          style={{
+            position: 'relative',
+            width: '44px',
+            height: '44px',
+            borderRadius: '9px',
+            overflow: 'hidden',
+            border: '2px solid #f59e0b',
+            boxShadow: '0 0 16px rgba(245, 158, 11, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6)',
+            flexShrink: 0,
+            background: '#0d1117',
+          }}
+        >
+          <img
+            src="/logo.png"
+            alt="Need for Speed: Most Wanted Official Cover Logo"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 15%',
+              display: 'block',
+            }}
+          />
         </div>
         <div>
           <div className="brand-title">
