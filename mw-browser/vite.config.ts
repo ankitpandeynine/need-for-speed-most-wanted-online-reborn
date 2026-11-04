@@ -66,6 +66,7 @@ function gameAssetsPlugin(): Plugin {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), gameAssetsPlugin()],
   server: {
     port: 3000,

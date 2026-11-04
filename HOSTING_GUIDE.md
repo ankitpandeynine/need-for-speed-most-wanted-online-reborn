@@ -193,3 +193,127 @@ When playing over slow, jittery, or mobile internet, streaming tracks on-the-fly
    - Real-time in-lobby chat with pre-baked police radio taunts.
    - P2P WebRTC mesh and BroadcastChannel telemetry synchronization.
 5. Click **"Start Race"** to launch into the room grid!
+
+---
+
+## Game Assets Setup & Mod Management Architecture
+
+This web application operates as a **100% serverless, zero-egress architecture**. The browser itself manages the game engine, file system, asset caching, and mod injection client-side using WebGPU, WebAssembly, and the Origin Private File System (OPFS).
+
+### 1. Where to Set Up the Game Files
+
+You have three options for providing the authentic Need for Speed: Most Wanted (2005) game assets:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        GAME ASSET SETUP OPTIONS                        │
+├────────────────────────────┬────────────────────────────┬──────────────┤
+│ METHOD                     │ STORAGE LOCATION           │ BANDWIDTH    │
+├────────────────────────────┼────────────────────────────┼──────────────┤
+│ 1. Cloudflare R2 ($0)      │ Cloud Object Storage       │ Free / 0 fee │
+│ 2. GitHub Releases ($0)    │ GitHub CDN Releases        │ Free / 0 fee │
+│ 3. Local Folder Import ($0)│ Player's Local Hard Drive  │ 100% Offline │
+└────────────────────────────┴────────────────────────────┴──────────────┘
+```
+
+#### Option A: Cloudflare R2 (Recommended for Public Websites)
+* **Cost**: $0.00 forever (Cloudflare R2 provides 10 GB storage and **0 egress fees**).
+* **Setup**:
+  1. Create a bucket `nfsmw-assets` on the [Cloudflare Dashboard](https://dash.cloudflare.com/).
+  2. Enable public read access and paste the CORS policy from [Part A](#part-a-host-the-14-gb-game-assets-on-cloudflare-r2-0-cost-0-egress).
+  3. Upload the retail game folders (`CARS/`, `TRACKS/`, `GLOBAL/`, `SOUND/`, `MOVIES/`, and `speed.exe`).
+  4. In [`mw-browser/public/games.json`](mw-browser/public/games.json), set `assetBase` to your public R2 URL (`https://pub-xxx.r2.dev`).
+  5. When players visit the website, assets stream on demand and are permanently saved to their local browser OPFS cache.
+
+#### Option B: GitHub Releases (Zero Setup Required)
+* **Cost**: $0.00 forever.
+* **Setup**:
+  1. Zip your game assets into chunks under 2 GB (e.g. `nfsmw-tracks.zip`, `nfsmw-cars.zip`).
+  2. Go to your GitHub repository → **Releases** → **Draft a new release**.
+  3. Upload the zip files as release assets and publish.
+  4. Set `assetBase` in `games.json` to `https://github.com/ankitpandeynine/need-for-speed-most-wanted-online-reborn/releases/download/v1.0.0`.
+
+#### Option C: Instant Local Folder Import (No Cloud Storage Needed)
+* **Cost**: $0.00 (Zero hosting overhead).
+* **Setup**:
+  1. Open the hosted website on any device.
+  2. Click the **Game Assets** tab in the navigation bar.
+  3. Click **"Select Local Game Folder"** and pick your existing PC retail installation of Need for Speed Most Wanted.
+  4. The browser copies the files directly into the browser's OPFS sandbox (`/opfs/nfsmw/game/`) in ~15 seconds.
+  5. The player can play the full game completely offline without uploading a single file to any server.
+
+---
+
+### 2. Major Pre-Packaged Mods (Included Out of the Box)
+
+The website includes pre-packaged, validated mods in [`mw-browser/public/mods/`](mw-browser/public/mods/) that can be activated or deactivated with a single click:
+
+| Mod Name | Version | Category | Description |
+| :--- | :--- | :--- | :--- |
+| **ThirteenAG Widescreen Fix** | v1.2.0 | HUD & UI | Authentic 16:9 / 21:9 / 32:9 widescreen FOV, corrected HUD aspect ratio, and borderless rendering. |
+| **Xbox 360 Visuals & Prompts** | v2.1.0 | HUD & UI | Xbox 360 HUD icons, controller button prompts, and high-contrast speedometer. |
+| **MW Eternal Overhaul** | v1.0.0 | Graphics & HUD | 11 custom HUDs (`HUDS_Custom_*.bin`), InGame/Global bundles, PlayStation/Xbox prompts, and lighting tweaks. |
+| **NFSMW Remastered Graphics (RG v9.1)** | v9.1.0 | Graphics | Authentic DirectX 9 `IDI_*` shader bytecode objects, dynamic bloom, and enhanced lighting. |
+| **NFS MW Redux 2026 4K Textures** | v3.0.0 | Graphics | 4K road tarmac, ultra-detailed building surfaces, and realistic skyboxes. |
+| **EA HD Logos & Movie** | v1.0.0 | Audio & Cutscenes | Crystal clear 1080p EA startup vector animations and splash screens. |
+| **NFSMW Extra Options** | v1.0.0 | Gameplay | Unlocks hidden police chases, debug cameras, and customization options. |
+
+---
+
+### 3. How Users Can Find & Add Any NFSMW Mod Themselves
+
+Players are not limited to pre-packaged mods; they can download and inject any community mod:
+
+#### Recommended Mod Repositories:
+* **[NFSMods.xyz](https://nfsmods.xyz/search?game=1)**: The largest modern archive of NFSMW mods (car add-ons, replacements, scripts, and visual overhauls).
+* **[NFSAddons.com](https://www.nfsaddons.com/downloads/nfsmw/)**: Classic repository with thousands of cars, vinyls, and handling profiles.
+* **[NFSCars.net](https://www.nfscars.net/need-for-speed-most-wanted/)**: Historical modding archive.
+
+#### How Users Inject Any Mod into the Hosted Web Game:
+1. Open the hosted website and click the **Mods** tab.
+2. Drag and drop any `.zip`, `.mwmod`, or extracted mod folder directly onto the page (or click **"Add Custom Mod"**).
+3. The client-side mod unpacker analyzes the files:
+   - **Automatic Validation**: Checks for real game assets. Empty archives or folders that only contain a `readme.txt` with external links are automatically rejected with an informative notice.
+   - **Universal Path Normalization**: Detects ModLoader paths (`ADDONS/CARS_REPLACE/<CAR>/`), loose `.asi` / `.ini` scripts, global files (`GLOBAL/`), and shaders, mapping them automatically to their proper runtime locations.
+   - **Compatibility Assessment**: Scores the mod for WebGPU compatibility. If the mod contains desktop Win32 hooks (`d3d9.dll`, `dinput8.dll`), the user receives an advisory notice with a **`⚡ FORCE MERGE & RUN ANYWAY`** button to inject all data files, textures, and shaders while bypassing desktop hooks.
+4. Toggle the mod switch **ON**.
+5. Click **"Launch Game"** — the website automatically merges all active mods into the game directory before starting the engine!
+
+---
+
+### 4. Client-Side Mod Injection Engine (Technical Deep Dive)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   CLIENT-SIDE MOD INJECTION LIFECYCLE                  │
+├────────────────────────────────────────────────────────────────────────┤
+│ 1. USER UPLOADS MOD ARCHIVE (.zip, .mwmod, or folder)                  │
+│    │                                                                   │
+│    ▼                                                                   │
+│ 2. CLIENT-SIDE UNPACKER & PATH NORMALIZER                              │
+│    ├── ADDONS/CARS_REPLACE/<CAR>/...  ──►  /CARS/<CAR>/...             │
+│    ├── Loose *.asi, *.ini, *.nfsms   ──►  /scripts/...                │
+│    ├── IDI_* (DirectX 9 Shaders)      ──►  / (Executable Root)         │
+│    ├── attributes.bin, gameplay.bin   ──►  /GLOBAL/...                 │
+│    └── *.vp6 (Movies)                 ──►  /MOVIES/...                 │
+│    │                                                                   │
+│    ▼                                                                   │
+│ 3. COMPATIBILITY ASSESSMENT                                            │
+│    ├── 100% Compatible (Textures, BINs, BUNs, Shaders, Scripts)       │
+│    └── Partial (Win32 DLL hooks bypassed with Force Merge option)     │
+│    │                                                                   │
+│    ▼                                                                   │
+│ 4. OPFS MOD STORAGE (/opfs/nfsmw/mods/<mod_id>/)                      │
+│    │                                                                   │
+│    ▼                                                                   │
+│ 5. AUTO-MERGE ON LAUNCH (autoMergeEnabledModsToOPFS)                  │
+│    └── Injects active mods in layer order directly into                │
+│        /opfs/nfsmw/game/ before WebGPU Recomp engine boots.            │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Why This Is Optimized for Hosted Websites:
+* **Zero Server Overhead**: The hosting server (Vercel or GitHub Pages) only serves static JavaScript, HTML, and CSS. All mod unpacking, path rewriting, and file merging take place in the user's browser thread.
+* **Instant Switching**: Players can enable or disable any combination of mods without re-downloading the base game.
+* **Crash-Proof Isolation**: If a custom mod corrupts the game state, the player can click **"Restore Original Assets"** in the Mod Manager to cleanly reset `/opfs/nfsmw/game/` from the base cache in seconds.
+* **Universal Settings & Progress Backup**: Players can click **"Export Universal Backup (.nfsmwcfg)"** in Controls & Hardware to download a single file containing all their controller binds, keybindings, touch placements, active mods, and career save files to restore on any other browser or device.
