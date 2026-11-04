@@ -151,6 +151,24 @@ export const App: React.FC = () => {
     setMods(modManager.getMods());
   };
 
+  const handleApplyProfile = async (profileId: string) => {
+    await modManager.applyProfile(profileId);
+    setMods(modManager.getMods());
+  };
+
+  const handleCreateCustomMod = async (options: {
+    name: string;
+    category: string;
+    author: string;
+    description: string;
+    priority: number;
+    targetPath: string;
+    file: File | Blob;
+  }) => {
+    await modManager.createCustomMod(options);
+    setMods(modManager.getMods());
+  };
+
   const handleResetModDefaults = () => {
     modManager.resetToPopularDefaults();
     setMods(modManager.getMods());
@@ -241,6 +259,8 @@ export const App: React.FC = () => {
             onEnableAllRecommended={handleEnableAllRecommended}
             onResetDefaults={handleResetModDefaults}
             onRemoveMod={handleRemoveMod}
+            onApplyProfile={handleApplyProfile}
+            onCreateCustomMod={handleCreateCustomMod}
           />
         )}
 

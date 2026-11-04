@@ -66,17 +66,40 @@ window.Worker = class extends NativeWorker {
 function stopRuntime() {
   if (stopped) return;
   stopped = true;
-  for (const worker of workers) worker.terminate();
-  workers.clear();
-  const audio = window.Module?.recompAudio;
-  if (audio) {
-    Atomics.store(audio.control, 10, 1); // AudioRing::Stopped
-    Atomics.store(audio.control, 2, 0); // AudioRing::Enabled
-    audio.node?.disconnect();
-    audio.context.close().catch(() => {});
+  for (const worker of workers) {
+    try { worker.terminate(); } catch {}
   }
-  graphicsDevice?.destroy();
+  workers.clear();
+  try {
+    if (window.Module?.recompAudioTimer) {
+      clearInterval(window.Module.recompAudioTimer);
+    }
+    const node = window.Module?.recompAudioNode;
+    if (node && typeof node.disconnect === 'function') {
+      node.disconnect();
+    }
+    const audio = window.Module?.recompAudio;
+    if (audio) {
+      if (audio.control && typeof Atomics !== 'undefined' && audio.control instanceof Int32Array) {
+        try {
+          Atomics.store(audio.control, 10, 1);
+          Atomics.store(audio.control, 2, 0);
+        } catch {}
+      }
+      if (typeof audio.close === 'function') {
+        audio.close().catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn('[NFSMW] Error stopping audio:', err);
+  }
+  try {
+    graphicsDevice?.destroy();
+  } catch {}
   graphicsDevice = null;
+  try {
+    window.parent?.postMessage({ type: 'recomp-stopped' }, '*');
+  } catch {}
 }
 window.recompStop = stopRuntime;
 window.addEventListener("pagehide", stopRuntime);
@@ -86,14 +109,27 @@ function checkRunning() {
 function status(text, back) {
   if (stopped) return;
   statusEl.textContent = text;
-  if (back) {
-    const a = document.createElement("a");
-    a.href = "../index.html";
-    a.textContent = "\nBack to the launcher";
-    statusEl.append(document.createElement("br"), a);
-  }
   statusEl.hidden = !text;
 }
+
+function resumeAudio() {
+  const ctx = window.Module?.recompAudio;
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+}
+['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart', 'gamepadconnected'].forEach(evt => {
+  window.addEventListener(evt, resumeAudio, { capture: true, passive: true });
+  document.addEventListener(evt, resumeAudio, { capture: true, passive: true });
+});
+try {
+  if (window.parent && window.parent !== window) {
+    ['click', 'pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(evt => {
+      window.parent.addEventListener(evt, resumeAudio, { capture: true, passive: true });
+      window.parent.document?.addEventListener(evt, resumeAudio, { capture: true, passive: true });
+    });
+  }
+} catch {}
 // The streamed file backend and the download worker report a file server that
 // keeps failing on this channel. Tell the player whether their own connection
 // or the server is down, and when a daily hosting quota resets.
@@ -407,9 +443,14 @@ canvas.addEventListener("touchstart", (e) => {
   }
 }, { passive: false });
 
-// Handle virtual touch & gyro input forwarded from parent window
+// Handle messages from parent window
 window.addEventListener("message", (e) => {
-  if (e.data?.type === "recomp-virtual-key") {
+  if (e.data?.type === "recomp-stop") {
+    stopRuntime();
+  } else if (e.data?.type === "recomp-resume-audio") {
+    resumeAudio();
+  } else if (e.data?.type === "recomp-virtual-key") {
+    resumeAudio();
     const { key, code, keyCode, action } = e.data;
     const evtType = action === "up" ? "keyup" : "keydown";
     const evt = new KeyboardEvent(evtType, {

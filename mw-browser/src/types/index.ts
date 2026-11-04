@@ -60,6 +60,15 @@ export interface GameSettings {
   backgroundDownloading: boolean;
 }
 
+export type ModCategory =
+  | 'all'
+  | 'graphics'
+  | 'vehicles'
+  | 'audio_cutscenes'
+  | 'gameplay'
+  | 'hud_ui'
+  | 'scripts';
+
 export interface ModItem {
   id: string;
   name: string;
@@ -67,6 +76,7 @@ export interface ModItem {
   author: string;
   description: string;
   type: string;
+  category?: string;
   enabled: boolean;
   priority: number;
   assetsCount: number;
@@ -76,6 +86,25 @@ export interface ModItem {
   verified?: boolean;
   previewUrl?: string;
   sourceFile?: string;
+  targetPaths?: string[];
+}
+
+export interface ModConflict {
+  filePath: string;
+  winningModId: string;
+  winningModName: string;
+  conflictingModId: string;
+  conflictingModName: string;
+}
+
+export interface ModProfile {
+  id: string;
+  name: string;
+  description: string;
+  enabledModIds: string[];
+  createdAt: number;
+  isPreset?: boolean;
+  icon?: string;
 }
 
 export interface StorageStatus {

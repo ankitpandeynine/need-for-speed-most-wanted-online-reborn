@@ -157,6 +157,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   // Dispatch virtual key press to the iframe runtime
   const handleVirtualKey = useCallback(
     (key: string, code: string, keyCode: number, action: 'down' | 'up') => {
+      resumeAudio();
       if (!iframeRef.current) return;
       // 1. Post message to the iframe worker/window
       iframeRef.current.contentWindow?.postMessage(
@@ -201,10 +202,45 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }, 120);
   }, [handleVirtualKey]);
 
-  // Listen to background asset download progress
+  // Forward user gesture to resume Web Audio context inside iframe
+  const resumeAudio = useCallback(() => {
+    try {
+      const iframeWin = iframeRef.current?.contentWindow as any;
+      if (iframeWin?.Module?.recompAudio?.state === 'suspended') {
+        iframeWin.Module.recompAudio.resume().catch(() => {});
+      }
+      iframeWin?.postMessage({ type: 'recomp-resume-audio' }, '*');
+    } catch {}
+  }, []);
+
+  const handleQuit = useCallback(() => {
+    try {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'recomp-stop' }, '*');
+      if (iframeRef.current) {
+        iframeRef.current.src = 'about:blank';
+      }
+    } catch {}
+    onStopGame();
+  }, [onStopGame]);
+
+  // Clean teardown on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        iframeRef.current?.contentWindow?.postMessage({ type: 'recomp-stop' }, '*');
+        if (iframeRef.current) {
+          iframeRef.current.src = 'about:blank';
+        }
+      } catch {}
+    };
+  }, []);
+
+  // Listen to background asset download progress & runtime messages
   useEffect(() => {
     const handleMsg = (e: MessageEvent) => {
-      if (e.data?.type === 'recomp-background-download-progress' || e.data?.type === 'recomp-initial-progress') {
+      if (e.data?.type === 'recomp-stopped') {
+        onStopGame();
+      } else if (e.data?.type === 'recomp-background-download-progress' || e.data?.type === 'recomp-initial-progress') {
         const p = e.data.progress;
         if (p) {
           const percent = p.bytesTotal ? Math.floor((p.bytesDone / p.bytesTotal) * 100) : 0;
@@ -222,7 +258,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
     window.addEventListener('message', handleMsg);
     return () => window.removeEventListener('message', handleMsg);
-  }, []);
+  }, [onStopGame]);
 
   // Gamepad API Polling
   const prevGamepadButtonsRef = useRef<{ [key: number]: boolean }>({});
@@ -539,7 +575,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
           </button>
 
           <button
-            onClick={onStopGame}
+            onClick={handleQuit}
             className="nfsmw-hud-btn"
             style={{ background: 'rgba(153, 27, 27, 0.5)', borderColor: '#dc2626', color: '#fecaca' }}
           >
@@ -554,8 +590,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         ref={viewportContainerRef}
         className="nfsmw-viewport"
         onClick={() => {
+          resumeAudio();
           iframeRef.current?.focus();
           iframeRef.current?.contentWindow?.focus();
+        }}
+        onTouchStart={() => {
+          resumeAudio();
         }}
       >
         {/* Real Recompiled WASM + WebGPU Iframe View */}
