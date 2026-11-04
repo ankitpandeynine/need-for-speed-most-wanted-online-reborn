@@ -13,6 +13,7 @@ import {
   backupGameFile,
   restoreGameFile,
   isRealGameAsset,
+  normalizeNFSMWGamePath,
   writeModCacheFile,
   getModCacheFile,
   listModCacheFiles,
@@ -718,11 +719,12 @@ export class ModManagerService {
     const appliedPaths: string[] = [];
 
     for (const entry of targetEntries) {
-      await writeModCacheFile(modId, entry.path, entry.data);
-      await backupGameFile(modId, entry.path);
-      const ok = await writeGameFile(entry.path, entry.data);
+      const normPath = normalizeNFSMWGamePath(entry.path);
+      await writeModCacheFile(modId, normPath, entry.data);
+      await backupGameFile(modId, normPath);
+      const ok = await writeGameFile(normPath, entry.data);
       if (ok) {
-        appliedPaths.push(entry.path);
+        appliedPaths.push(normPath);
       }
     }
 
@@ -806,22 +808,17 @@ export class ModManagerService {
     let totalSize = 0;
 
     for (const item of targetFiles) {
-      // Clean path: strip the root folder name prefix if present
-      let relPath = item.path.replace(/^\/+/, '');
-      const parts = relPath.split('/');
-      if (parts.length > 1 && parts[0].toLowerCase() === folderName.toLowerCase()) {
-        relPath = parts.slice(1).join('/');
-      }
+      const normPath = normalizeNFSMWGamePath(item.path);
 
       const buf = await item.file.arrayBuffer();
       const data = new Uint8Array(buf);
       totalSize += data.length;
 
-      await writeModCacheFile(modId, relPath, data);
-      await backupGameFile(modId, relPath);
-      const ok = await writeGameFile(relPath, data);
+      await writeModCacheFile(modId, normPath, data);
+      await backupGameFile(modId, normPath);
+      const ok = await writeGameFile(normPath, data);
       if (ok) {
-        appliedPaths.push(relPath);
+        appliedPaths.push(normPath);
       }
     }
 
@@ -883,7 +880,8 @@ export class ModManagerService {
         for (const p of cachedPaths) {
           const data = await getModCacheFile(mod.id, p);
           if (data) {
-            await writeGameFile(p, data);
+            const normPath = normalizeNFSMWGamePath(p);
+            await writeGameFile(normPath, data);
             totalFiles++;
           }
         }
@@ -900,8 +898,9 @@ export class ModManagerService {
             const entries = await extractZipEntries(blob);
             for (const entry of entries) {
               if (isRealGameAsset(entry.path)) {
-                await writeModCacheFile(mod.id, entry.path, entry.data);
-                await writeGameFile(entry.path, entry.data);
+                const normPath = normalizeNFSMWGamePath(entry.path);
+                await writeModCacheFile(mod.id, normPath, entry.data);
+                await writeGameFile(normPath, entry.data);
                 totalFiles++;
               }
             }

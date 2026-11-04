@@ -1,9 +1,9 @@
 {
   "name": "Need for Speed Most Wanted 2005",
-  "short_name": "NFS Most Wanted 2005",
+  "short_name": "NFSMW 2005",
   "description": "Authentic Need for Speed Most Wanted (2005) running in browser with 120 Hz WebGPU simulation, mods, and offline play.",
-  "start_url": "/",
-  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "id": "/?v=2005",
   "display": "standalone",
   "orientation": "landscape-primary",
   "background_color": "#090c12",

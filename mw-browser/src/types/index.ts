@@ -97,6 +97,67 @@ export interface GameSettings {
   backgroundDownloading: boolean;
 }
 
+export const DEFAULT_MOBILE_SETTINGS: MobileControlSettings = {
+  enabled: true,
+  layout: 'split',
+  buttonScale: 1.0,
+  opacity: 0.85,
+  swapHands: false,
+  haptics: true,
+  gyroEnabled: false,
+  gyroSensitivity: 1.5,
+  gyroDeadzone: 3,
+};
+
+export const DEFAULT_KEY_BINDINGS: KeyBindings = {
+  accelerate: 'ArrowUp',
+  brake: 'ArrowDown',
+  steerLeft: 'ArrowLeft',
+  steerRight: 'ArrowRight',
+  nitrous: 'ShiftLeft',
+  handbrake: 'Space',
+  speedbreaker: 'KeyG',
+  camera: 'KeyC',
+  reset: 'KeyR',
+  pause: 'Escape',
+};
+
+export const DEFAULT_CONTROLLER_BINDINGS: ControllerBindings = {
+  accelerate: 7, // RT
+  brake: 6, // LT
+  steerLeft: 'axis0_neg',
+  steerRight: 'axis0_pos',
+  nitrous: 0, // A / Cross
+  handbrake: 2, // X / Square
+  speedbreaker: 1, // B / Circle
+  camera: 3, // Y / Triangle
+  pause: 9, // Start / Options
+  reset: 8, // Back / Share
+  lookBack: 11, // R3 / Right Stick
+  rumbleEnabled: true,
+  deadzone: 0.15,
+};
+
+export const DEFAULT_SETTINGS: GameSettings = {
+  resolution: '720p',
+  frameRateLimit: 120,
+  simulationHz: 120,
+  widescreenFix: true,
+  fovMode: 'xbox360',
+  anisotropicFiltering: 8,
+  textureQuality: 'high',
+  shadows: 'medium',
+  reflections: 'high',
+  audioVolume: 80,
+  musicVolume: 75,
+  controllerLayout: 'xbox',
+  mobileControls: DEFAULT_MOBILE_SETTINGS,
+  keyBindings: DEFAULT_KEY_BINDINGS,
+  controllerBindings: DEFAULT_CONTROLLER_BINDINGS,
+  offlinePreload: false,
+  backgroundDownloading: true,
+};
+
 export interface FullProfileBackup {
   format: 'nfsmw-reborn-profile';
   version: '2.0.0';

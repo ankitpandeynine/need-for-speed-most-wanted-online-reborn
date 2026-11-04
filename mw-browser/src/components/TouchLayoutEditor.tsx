@@ -36,7 +36,7 @@ interface ButtonDef {
   label: string;
 }
 
-const DEFAULT_POSITIONS: Record<keyof IndividualTouchPositions, IndividualButtonPosition> = {
+export const DEFAULT_POSITIONS: Record<keyof IndividualTouchPositions, IndividualButtonPosition> = {
   steerLeft: { x: 7, y: 80 },
   steerRight: { x: 18, y: 80 },
   accelerate: { x: 92, y: 74 },

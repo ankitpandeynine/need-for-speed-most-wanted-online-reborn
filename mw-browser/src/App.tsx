@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ViewTab, GameSettings, ModItem, StorageStatus, MobileControlSettings, KeyBindings, ControllerBindings } from './types';
+import {
+  ViewTab,
+  GameSettings,
+  ModItem,
+  StorageStatus,
+  MobileControlSettings,
+  KeyBindings,
+  ControllerBindings,
+  DEFAULT_MOBILE_SETTINGS,
+  DEFAULT_KEY_BINDINGS,
+  DEFAULT_CONTROLLER_BINDINGS,
+  DEFAULT_SETTINGS,
+} from './types';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { ModManagerView } from './components/ModManagerView';
@@ -11,67 +23,6 @@ import { GameCanvas } from './components/GameCanvas';
 import { GameRuntimeService } from './services/gameRuntime';
 import { ModManagerService } from './services/modManager';
 import { BrowserStorageService } from './services/storage';
-
-const DEFAULT_MOBILE_SETTINGS: MobileControlSettings = {
-  enabled: true,
-  layout: 'split',
-  buttonScale: 1.0,
-  opacity: 0.85,
-  swapHands: false,
-  haptics: true,
-  gyroEnabled: false,
-  gyroSensitivity: 1.5,
-  gyroDeadzone: 3,
-};
-
-const DEFAULT_KEY_BINDINGS: KeyBindings = {
-  accelerate: 'ArrowUp',
-  brake: 'ArrowDown',
-  steerLeft: 'ArrowLeft',
-  steerRight: 'ArrowRight',
-  nitrous: 'ShiftLeft',
-  handbrake: 'Space',
-  speedbreaker: 'KeyG',
-  camera: 'KeyC',
-  reset: 'KeyR',
-  pause: 'Escape',
-};
-
-export const DEFAULT_CONTROLLER_BINDINGS: ControllerBindings = {
-  accelerate: 7, // RT
-  brake: 6, // LT
-  steerLeft: 'axis0_neg',
-  steerRight: 'axis0_pos',
-  nitrous: 0, // A / Cross
-  handbrake: 2, // X / Square
-  speedbreaker: 1, // B / Circle
-  camera: 3, // Y / Triangle
-  pause: 9, // Start / Options
-  reset: 8, // Back / Share
-  lookBack: 11, // R3 / Right Stick
-  rumbleEnabled: true,
-  deadzone: 0.15,
-};
-
-const DEFAULT_SETTINGS: GameSettings = {
-  resolution: '720p',
-  frameRateLimit: 120,
-  simulationHz: 120,
-  widescreenFix: true,
-  fovMode: 'xbox360',
-  anisotropicFiltering: 8,
-  textureQuality: 'high',
-  shadows: 'medium',
-  reflections: 'high',
-  audioVolume: 80,
-  musicVolume: 75,
-  controllerLayout: 'xbox',
-  mobileControls: DEFAULT_MOBILE_SETTINGS,
-  keyBindings: DEFAULT_KEY_BINDINGS,
-  controllerBindings: DEFAULT_CONTROLLER_BINDINGS,
-  offlinePreload: false,
-  backgroundDownloading: true,
-};
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<ViewTab>('dashboard');

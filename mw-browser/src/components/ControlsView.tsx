@@ -18,7 +18,7 @@ import {
   Maximize2,
   FileCode,
 } from 'lucide-react';
-import { TouchLayoutEditor } from './TouchLayoutEditor';
+import { TouchLayoutEditor, DEFAULT_POSITIONS } from './TouchLayoutEditor';
 import { ProfileSyncService } from '../services/profileSync';
 
 interface ControlsViewProps {
@@ -535,6 +535,148 @@ export const ControlsView: React.FC<ControlsViewProps> = ({
                 <span>Reset Layout</span>
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Live Racing Cockpit Preview Box with BMW M3 GTR Wallpaper */}
+        <div
+          onClick={() => setShowTouchEditor(true)}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: 'clamp(240px, 32vw, 380px)',
+            borderRadius: '12px',
+            border: '2px solid rgba(245, 158, 11, 0.4)',
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)), url('/images/nfsmw-racing-bg.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            marginBottom: '20px',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            boxShadow: 'inset 0 0 40px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6)',
+          }}
+          title="Click to measure display and open full-screen touch HUD customizer"
+        >
+          {/* Top Info Bar */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              right: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(10, 14, 23, 0.85)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                borderRadius: '16px',
+                padding: '4px 12px',
+                color: '#fff',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <Maximize2 size={13} color="#f59e0b" />
+              <span>
+                Display: <strong>{screenMetrics.width} × {screenMetrics.height}</strong> ({screenMetrics.aspect}) • NFSMW Cockpit View
+              </span>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(16, 185, 129, 0.9)',
+                color: '#000',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '11px',
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                boxShadow: '0 0 14px rgba(16, 185, 129, 0.6)',
+              }}
+            >
+              ⚡ TAP ANYWHERE TO MOVE CONTROLS
+            </div>
+          </div>
+
+          {/* Render 11 Buttons in Preview */}
+          {(() => {
+            const activePositions = {
+              ...DEFAULT_POSITIONS,
+              ...(settings.individualPositions || {}),
+            };
+            const previewButtons: { id: keyof typeof DEFAULT_POSITIONS; label: string; color: string; border: string; bg: string }[] = [
+              { id: 'steerLeft', label: '◀ STEER L', color: '#f59e0b', border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.25)' },
+              { id: 'steerRight', label: 'STEER R ▶', color: '#f59e0b', border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.25)' },
+              { id: 'accelerate', label: '▲ GAS', color: '#10b981', border: '#10b981', bg: 'rgba(16, 185, 129, 0.25)' },
+              { id: 'brake', label: '▼ BRAKE', color: '#ef4444', border: '#ef4444', bg: 'rgba(239, 68, 68, 0.25)' },
+              { id: 'nitrous', label: '🔥 NOS', color: '#06b6d4', border: '#06b6d4', bg: 'rgba(6, 182, 212, 0.25)' },
+              { id: 'handbrake', label: '⚡ E-BRAKE', color: '#eab308', border: '#eab308', bg: 'rgba(234, 179, 8, 0.25)' },
+              { id: 'speedbreaker', label: '⏱ SPEEDBREAKER', color: '#a855f7', border: '#a855f7', bg: 'rgba(168, 85, 247, 0.25)' },
+              { id: 'camera', label: '📷 CAM', color: '#94a3b8', border: '#64748b', bg: 'rgba(15, 23, 42, 0.6)' },
+              { id: 'reset', label: '↺ RESET', color: '#94a3b8', border: '#64748b', bg: 'rgba(15, 23, 42, 0.6)' },
+              { id: 'pause', label: '⏸ ESC', color: '#94a3b8', border: '#64748b', bg: 'rgba(15, 23, 42, 0.6)' },
+              { id: 'enter', label: '↵ ENTER', color: '#10b981', border: '#10b981', bg: 'rgba(16, 185, 129, 0.3)' },
+            ];
+
+            return previewButtons.map((btn) => {
+              const pos = activePositions[btn.id] || DEFAULT_POSITIONS[btn.id];
+              return (
+                <div
+                  key={btn.id}
+                  style={{
+                    position: 'absolute',
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    padding: '5px 10px',
+                    borderRadius: '8px',
+                    background: btn.bg,
+                    border: `1.5px dashed ${btn.border}`,
+                    color: btn.color,
+                    fontSize: '10.5px',
+                    fontWeight: 800,
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.7)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {btn.label}
+                </div>
+              );
+            });
+          })()}
+
+          {/* Center Overlay Banner */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '14px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(10, 14, 23, 0.88)',
+              border: '1px solid rgba(245, 158, 11, 0.5)',
+              borderRadius: '24px',
+              padding: '8px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.7)',
+            }}
+          >
+            <Move size={15} color="#f59e0b" />
+            <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#fff' }}>
+              Click anywhere on this preview to reposition buttons on your device display
+            </span>
           </div>
         </div>
 
