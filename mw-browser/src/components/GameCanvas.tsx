@@ -488,12 +488,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     };
   }, []);
 
+  const isLocalFolderLoaded = typeof window !== 'undefined' &&
+    (localStorage.getItem('nfsmw_local_folder_loaded') === 'true' || localStorage.getItem('nfsmw_installed') === 'true');
+
   const openDedicatedTab = () => {
-    const offlineParam = _settings.offlinePreload ? '&offline=1' : '';
+    const offlineParam = (_settings.offlinePreload || isLocalFolderLoaded) ? '&offline=1' : '';
     window.open(`/nfsmw/runtime.html?game=nfsmw&res=1280x720${offlineParam}`, '_blank');
   };
 
-  const iframeSrc = `/nfsmw/runtime.html?game=nfsmw&res=1280x720${_settings.offlinePreload ? '&offline=1' : ''}`;
+  const iframeSrc = `/nfsmw/runtime.html?game=nfsmw&res=1280x720${(_settings.offlinePreload || isLocalFolderLoaded) ? '&offline=1' : ''}`;
 
   return (
     <div className={`nfsmw-game-container ${isPortrait ? 'portrait-mode' : 'landscape-mode'}`}>

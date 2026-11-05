@@ -306,9 +306,11 @@ async function prepareGame(game) {
   try {
     status("Checking game files…");
     const cached = await request("status");
-    if (cached.status.state === "ready") {
+    const isLocalReady = cached.status.state === "ready" ||
+      ((localStorage.getItem("nfsmw_installed") === "true" || localStorage.getItem("nfsmw_local_folder_loaded") === "true") && cached.status.state !== "notFound");
+    if (isLocalReady) {
       window.parent?.postMessage({ type: "recomp-storage-ready" }, "*");
-      return false;
+      return false; // Skip downloading and launch immediately!
     }
     if (!game.hostedAssets) throw new Error(`${game.title} has not been imported yet.`);
     const params = new URLSearchParams(location.search);

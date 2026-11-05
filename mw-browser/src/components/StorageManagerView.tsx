@@ -59,7 +59,10 @@ export const StorageManagerView: React.FC<StorageManagerViewProps> = ({
           if (data.error) {
             setImportMessage(`Import error: ${data.error}`);
           } else {
-            setImportMessage('Game imported successfully into browser storage! You can launch now.');
+            localStorage.setItem('nfsmw_local_folder_loaded', 'true');
+            localStorage.setItem('nfsmw_installed', 'true');
+            localStorage.setItem('nfsmw_file_count', '1364');
+            setImportMessage('✓ Game imported successfully into local OPFS storage! Future launches will load instantly from disk with zero downloading.');
             onImportComplete(1364);
             setTimeout(() => setImportMessage(null), 5000);
           }

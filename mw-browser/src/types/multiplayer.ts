@@ -74,6 +74,9 @@ export interface ChatMessage {
   senderName: string;
   text: string;
   timestamp: number;
+  avatar?: string;
+  carModel?: string;
+  roomId?: string;
   isSystem?: boolean;
   isTaunt?: boolean;
 }

@@ -3,7 +3,6 @@ import {
   Play,
   HardDrive,
   Zap,
-  ShieldCheck,
   ChevronRight,
   Users,
   DownloadCloud,
@@ -41,8 +40,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [pwaInstalled, setPwaInstalled] = useState(false);
+  const [isLocalReady, setIsLocalReady] = useState(false);
 
   useEffect(() => {
+    const local =
+      typeof localStorage !== 'undefined' &&
+      (localStorage.getItem('nfsmw_local_folder_loaded') === 'true' ||
+        localStorage.getItem('nfsmw_installed') === 'true');
+    setIsLocalReady(local);
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -142,23 +148,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  color: '#10b981',
-                }}
-              >
-                <ShieldCheck size={14} />
-                <span>Offline Ready</span>
-              </div>
+              {isLocalReady && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    background: 'rgba(16, 185, 129, 0.18)',
+                    border: '1px solid #10b981',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    color: '#10b981',
+                  }}
+                >
+                  <Zap size={14} />
+                  <span>⚡ Local Disk Loaded • Instant Launch (0 Downloads)</span>
+                </div>
+              )}
             </div>
 
             {/* Title */}
@@ -195,7 +203,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }}
               >
                 <Play size={18} fill="#000" />
-                START ENGINE / PLAY NOW
+                {isLocalReady ? '⚡ INSTANT LAUNCH (LOCAL DISK)' : 'START ENGINE / PLAY NOW'}
               </button>
 
               <button

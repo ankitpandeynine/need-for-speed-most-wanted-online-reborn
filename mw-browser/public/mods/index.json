@@ -78,85 +78,6 @@
     ]
   },
   {
-    "id": "ba508c-nofilter",
-    "name": "NoFilter Lighting & Vibrant Atmospheric Clarity",
-    "version": "1.2.0",
-    "author": "Osprey / NFSMods",
-    "description": "Eliminates harsh yellow/orange tint and restores natural atmospheric lighting, vivid sky contrasts, and sharp shadows.",
-    "type": "graphics",
-    "category": "graphics",
-    "enabled": false,
-    "priority": 92,
-    "assetsCount": 2,
-    "downloadUrl": "/mods/ba508c-nofilter-1.2.0.mwmod",
-    "fileSize": 1815,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/NFSMostWanted.NoFilter.ini",
-      "scripts/SkyAndLightingChange.nfsms"
-    ]
-  },
-  {
-    "id": "mw05-handling-physics-lighting",
-    "name": "MW05 Handling, Physics & Lighting Overhaul #2",
-    "version": "2.0.0",
-    "author": "MW05 Team / NFSMods",
-    "description": "Complete physics and handling rework: realistic downforce, sharper steering response, progressive slip-angle drift, and high dynamic range lighting.",
-    "type": "gameplay",
-    "category": "gameplay",
-    "enabled": false,
-    "priority": 88,
-    "assetsCount": 2,
-    "downloadUrl": "/mods/mw05-handling-physics-lighting-2.0.0.mwmod",
-    "fileSize": 162390,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "GLOBAL/attributes.bin",
-      "scripts/HandlingLightingPhysics.nfsms"
-    ]
-  },
-  {
-    "id": "nfsmw-hud-adapter",
-    "name": "NFSMW Aspect-Ratio HUD Adapter v1.0.0",
-    "version": "1.0.0",
-    "author": "nlgzrgn / MW Community",
-    "description": "Flawless aspect-ratio correction for HUD, gauges, dials, rearview mirror, and fonts across 16:9, 21:9, and mobile displays.",
-    "type": "hud_ui",
-    "category": "hud_ui",
-    "enabled": false,
-    "priority": 86,
-    "assetsCount": 1,
-    "downloadUrl": "/mods/nfsmw-hud-adapter-1.0.0.mwmod",
-    "fileSize": 41295,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/NFSMWHUDAdapter.asi"
-    ]
-  },
-  {
-    "id": "nfs-hud-resizer",
-    "name": "NFS HUD Resizer & Dynamic Gauge Scaler",
-    "version": "1.1.0",
-    "author": "Aero_ / NFSMods",
-    "description": "Allows customizable on-screen gauge scaling and repositioning for speedometer, rearview mirror, and pursuit status bar.",
-    "type": "hud_ui",
-    "category": "hud_ui",
-    "enabled": false,
-    "priority": 84,
-    "assetsCount": 2,
-    "downloadUrl": "/mods/nfs-hud-resizer-1.1.0.mwmod",
-    "fileSize": 124448,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/NFSMWHUDResizer.asi",
-      "scripts/NFSMWHUDResizer.ini"
-    ]
-  },
-  {
     "id": "bmw-m3-gtr-e46-remaster",
     "name": "BMW M3 GTR (E46) Ultra-Detail Remaster",
     "version": "3.2.0",
@@ -189,74 +110,13 @@
     "priority": 80,
     "assetsCount": 3,
     "downloadUrl": "/mods/bugatti-chiron-hypercar-1.5.0.mwmod",
-    "fileSize": 10880761,
+    "fileSize": 10485760,
     "isInstalled": false,
     "verified": true,
     "targetPaths": [
       "CARS/CHIRON/GEOMETRY.BIN",
       "CARS/CHIRON/textures.bin",
       "CARS/CHIRON/vinyls.bin"
-    ]
-  },
-  {
-    "id": "bugatti-divo-hypercar",
-    "name": "Bugatti Divo Track Hypercar (SL65 Slot)",
-    "version": "1.0.0",
-    "author": "nfs.com.ru / Divo Team",
-    "description": "Bugatti Divo track hypercar: extreme lateral G-force cornering dynamics, aerodynamic dorsal fin, and OLED tail lights.",
-    "type": "vehicles",
-    "category": "vehicles",
-    "enabled": false,
-    "priority": 78,
-    "assetsCount": 3,
-    "downloadUrl": "/mods/bugatti-divo-hypercar-1.0.0.mwmod",
-    "fileSize": 4715671,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "CARS/SL65/GEOMETRY.BIN",
-      "CARS/SL65/textures.bin",
-      "CARS/SL65/SECONDARYLOGO.BIN"
-    ]
-  },
-  {
-    "id": "nfsmw-free-unlock-all",
-    "name": "Free Unlock All Bonus Cars & Police Cruisers",
-    "version": "1.0.0",
-    "author": "nlgzrgn / NFSMods",
-    "description": "Instantly unlocks all 15 Blacklist boss cars, Rockport police cruisers, Challenge series cars, and special reward vehicles.",
-    "type": "gameplay",
-    "category": "gameplay",
-    "enabled": false,
-    "priority": 76,
-    "assetsCount": 2,
-    "downloadUrl": "/mods/nfsmw-free-unlock-all-1.0.0.mwmod",
-    "fileSize": 1412,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "scripts/BonusCars.nfsms",
-      "scripts/BaseCarList.nfsms"
-    ]
-  },
-  {
-    "id": "rockport-enhancement-mod",
-    "name": "Rockport Enhancement & Pursuit Overhaul",
-    "version": "0.9.5",
-    "author": "Enhancement Team",
-    "description": "Overhauls pursuit AI tactics, introduces aggressive Rhino SUV roadblocks, increases civilian traffic density, and rebalances career rewards.",
-    "type": "gameplay",
-    "category": "gameplay",
-    "enabled": false,
-    "priority": 74,
-    "assetsCount": 2,
-    "downloadUrl": "/mods/rockport-enhancement-mod-0.9.5.mwmod",
-    "fileSize": 575915,
-    "isInstalled": false,
-    "verified": true,
-    "targetPaths": [
-      "GLOBAL/gameplay.bin",
-      "GLOBAL/FE_ATTRIB.bin"
     ]
   },
   {

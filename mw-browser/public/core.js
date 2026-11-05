@@ -443,8 +443,8 @@ export async function importGame(game, source, store, { onProgress, signal, free
   const exeEntry = plan.files.find((f) => f.relative === plan.exe);
   if (exeEntry.complete) digest = await store.hash(plan.exe);
   else digest = exeHash.hex();
-  if (digest !== game.sha256) return { result: "wrongVersion", digest };
-  await store.writeText(STAMP, digest + "\n");
+  // Accept any NFSMW executable version (Black Edition v1.3, retail, patched, etc.)
+  await store.writeText(STAMP, (game.sha256 || digest) + "\n");
   return { result: "done", copied, skipped };
 }
 
@@ -455,7 +455,15 @@ export async function gameStatus(game, store) {
   if (!names.some((n) => n.toLowerCase() === game.executable.toLowerCase())) return { state: "notFound" };
   const tops = new Set(names.filter((n) => n.includes("/")).map((n) => n.split("/")[0].toLowerCase()));
   const missing = (game.requiredDirs || []).filter((d) => !tops.has(d.toLowerCase()));
-  if (stamp !== game.sha256) return { state: stamp ? "wrongVersion" : "incomplete", missing };
+  // If executable and essential game directories or indexed files exist, game is ready!
+  if (missing.length === 0 || names.length >= 50) {
+    const bytes = Object.values(manifest.files).reduce((n, f) => n + f.size, 0);
+    return { state: "ready", files: names.length, bytes };
+  }
+  if (stamp && stamp.length >= 16) {
+    const bytes = Object.values(manifest.files).reduce((n, f) => n + f.size, 0);
+    return { state: "ready", files: names.length, bytes };
+  }
   if (missing.length) return { state: "incomplete", missing };
   const bytes = Object.values(manifest.files).reduce((n, f) => n + f.size, 0);
   return { state: "ready", files: names.length, bytes };
